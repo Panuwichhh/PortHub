@@ -3,16 +3,18 @@ package utils
 import (
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/dgrijalva/jwt-go"
 )
 
-var secret = []byte("secret-key")
+var jwtKey = []byte("your_secret_key") // ในอนาคตควรใช้ Environment Variable
 
 func GenerateToken(email string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"email": email,
-		"exp":   time.Now().Add(24 * time.Hour).Unix(),
-	})
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &jwt.StandardClaims{
+		Subject:   email,
+		ExpiresAt: expirationTime.Unix(),
+	}
 
-	return token.SignedString(secret)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtKey)
 }

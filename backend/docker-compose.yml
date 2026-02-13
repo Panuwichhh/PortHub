@@ -12,7 +12,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # เชื่อมไฟล์ SQL สำหรับสร้างตารางครั้งแรก
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # เก็บข้อมูลไว้ใน Volume ไม่ให้หายเมื่อปิด Container
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
   postgres_data:

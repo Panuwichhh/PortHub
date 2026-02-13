@@ -1,62 +1,103 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#f1f7ff] flex flex-col font-sans text-black">
-      {/* --- Header / Navbar --- */}
-      <nav className="w-full py-4 px-6 md:px-12 flex justify-between items-center bg-white border-b border-gray-100 shadow-sm">
-        {/* Logo */}
-        <div className="text-2xl font-black tracking-tighter italic">
-          Port<span className="text-[#1d7cf2]">Hub</span>
-        </div>
+    <div className="relative min-h-screen bg-[#f1f7ff] flex flex-col font-sans text-black overflow-hidden">
+      
+      {/* 🌟 ลูกเล่นที่ 1: Animated Background Blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#1d7cf2]/10 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-blue-400/10 rounded-full blur-[100px]" />
 
-        {/* Profile Icon / Login Link */}
-        <div className="flex items-center gap-4">
-          <Link href="/login">
-            <div className="cursor-pointer hover:opacity-80 transition-opacity">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                strokeWidth={1.5} 
-                stroke="#1d7cf2" 
-                className="w-10 h-10"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" 
-                />
-              </svg>
-            </div>
+      {/* --- Header / Navbar --- */}
+      <nav className="z-10 w-full py-6 px-6 md:px-12 flex justify-between items-center bg-white/30 backdrop-blur-md border-b border-white/20 sticky top-0">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="text-2xl font-black tracking-tighter italic"
+        >
+          Port<span className="text-[#1d7cf2]">Hub</span>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-6"
+        >
+          <Link href="/login" className="text-sm font-bold hover:text-[#1d7cf2] transition-colors uppercase tracking-widest">Sign In</Link>
+          <Link href="/register">
+            <button className="px-5 py-2 bg-black text-white text-[10px] font-black rounded-full hover:bg-gray-800 transition-all uppercase tracking-widest">
+              Get Started
+            </button>
           </Link>
-        </div>
+        </motion.div>
       </nav>
 
       {/* --- Hero Section --- */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 text-center pb-20">
-        {/* Main Title - ตัวอักษรขนาดใหญ่ที่เป็นเอกลักษณ์ของคุณ */}
-        <h1 className="text-[15vw] md:text-[14rem] font-black tracking-tighter leading-none select-none">
-          Port<span className="text-[#1d7cf2]">Hub</span>
-        </h1>
+      <main className="z-10 flex-1 flex flex-col items-center justify-center px-4 text-center py-20 relative">
         
-        {/* Subtitle */}
-        <p className="mt-4 text-lg md:text-2xl font-medium tracking-[0.2em] uppercase">
-          Your Professional Hub
-        </p>
+        {/* Floating Badge */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6 flex items-center gap-2 px-4 py-1.5 bg-white border border-gray-200 rounded-full shadow-sm"
+        >
+          <Sparkles className="w-4 h-4 text-[#1d7cf2]" />
+          <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Next Gen Portfolio Hub</span>
+        </motion.div>
 
-        {/* Let's Go Button */}
-        <Link href="/login">
-          <button className="mt-12 px-12 py-3 bg-[#1d7cf2] text-white text-lg font-semibold rounded-lg shadow-[0_4px_14px_0_rgba(29,124,242,0.39)] hover:bg-[#1565c0] transition-all transform active:scale-95">
-            Let's Go
-          </button>
-        </Link>
+        {/* Main Title */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="relative"
+        >
+          <h1 className="text-[18vw] md:text-[14rem] font-black tracking-tighter leading-[0.8] select-none text-black">
+            Port<span className="text-[#1d7cf2]">Hub</span>
+          </h1>
+          {/* เงาสะท้อนสวยๆ */}
+          <h1 className="absolute top-2 left-0 w-full text-[18vw] md:text-[14rem] font-black tracking-tighter leading-[0.8] select-none text-[#1d7cf2]/5 -z-10 blur-[2px]">
+            PortHub
+          </h1>
+        </motion.div>
+        
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mt-8 text-sm md:text-xl font-bold tracking-[0.3em] uppercase text-gray-400"
+        >
+          Your Professional Digital Identity
+        </motion.p>
+
+        {/* 🌟 LET'S GO Button: แก้ไขให้ไปหน้า Dashboard ทันที 🌟 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <Link href="/dashboard"> {/* เปลี่ยนจุดหมายปลายทางเป็น /dashboard */}
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="group mt-12 flex items-center gap-3 px-10 py-4 bg-[#1d7cf2] text-white text-xl font-black rounded-2xl shadow-[0_20px_40px_rgba(29,124,242,0.3)] hover:shadow-[0_25px_50px_rgba(29,124,242,0.4)] transition-all uppercase tracking-tighter"
+            >
+              LET'S GO
+              <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            </motion.button>
+          </Link>
+        </motion.div>
+
       </main>
 
-      {/* Footer - ส่วนท้ายแบบเรียบง่าย */}
-      <footer className="py-6 text-center text-sm text-gray-400">
-        © 2026 PortHub Project
+      <footer className="z-10 py-10 text-center text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
+        © 2026 PortHub • Build with Passion
       </footer>
     </div>
   );

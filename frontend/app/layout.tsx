@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // นำเข้าฟอนต์ Inter จาก Google Fonts
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-// ตั้งค่าฟอนต์ Inter
+// ตั้งค่าฟอนต์ Inter พร้อมรองรับ CSS Variable
 const inter = Inter({ 
   subsets: ["latin"],
-  variable: "--font-inter", // สร้างตัวแปร CSS ไว้เผื่อเรียกใช้
+  variable: "--font-inter", 
 });
 
 export const metadata: Metadata = {
@@ -20,11 +20,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* 1. เพิ่ม className ของ inter เพื่อให้ฟอนต์ทั้งเว็บเปลี่ยนเป็น Inter 
-        2. ลบ bg-slate-100 ออก เพราะเราใช้ bg-[#f1f7ff] ในแต่ละหน้าแล้ว 
-        3. เพิ่ม antialiased เพื่อให้ตัวอักษรดูคมชัดและเนียนตาขึ้น
+      {/* 1. เพิ่ม inter.variable เพื่อให้เรียกใช้ฟอนต์ผ่าน CSS ได้เนียนขึ้น
+          2. ใส่ bg-[#f1f7ff] ไว้ที่ body เลย เพื่อให้ทุกหน้ามีสีพื้นหลังเดียวกัน ไม่เกิดอาการ "จอขาวแวบ"
+          3. antialiased ช่วยให้ตัวอักษรบางและคมชัดขึ้นบน MacOS/Windows
       */}
-      <body className={`${inter.className} antialiased text-black`}>
+      <body className={`${inter.variable} ${inter.className} antialiased text-black bg-[#f1f7ff]`}>
         {children}
       </body>
     </html>

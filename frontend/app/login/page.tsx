@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+// --- เพิ่ม Import toast ---
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -11,9 +13,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // State สำหรับควบคุม Popup
   const [showPopup, setShowPopup] = useState(false);
-
   const router = useRouter();
 
   useEffect(() => {
@@ -22,7 +22,12 @@ export default function LoginPage() {
       setEmail(savedEmail);
       setRememberMe(true);
     }
-  }, []);
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      router.push('/dashboard');
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,17 +49,30 @@ export default function LoginPage() {
           localStorage.removeItem('remember_email');
         }
         localStorage.setItem('token', data.token);
+        
+        // --- แสดงแจ้งเตือนสำเร็จ ---
+        toast.success('ยินดีต้อนรับกลับมา!');
         router.push('/dashboard');
       } else {
-        // ถ้าไม่พบอีเมล ให้เปิด Popup
+        // --- ตรวจสอบเงื่อนไข Error ---
         if (data.error && data.error.includes("ไม่พบอีเมล")) {
           setShowPopup(true);
         } else {
-          alert(data.error || "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+          // --- ใช้ toast แสดง Error รหัสผ่านผิดแบบสวยๆ ---
+          toast.error(data.error || "อีเมลหรือรหัสผ่านไม่ถูกต้อง", {
+            style: {
+              borderRadius: '12px',
+              background: '#333',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: 'bold',
+            },
+            duration: 3000,
+          });
         }
       }
     } catch (error) {
-      alert("เชื่อมต่อ Server ไม่ได้ กรุณาลองใหม่");
+      toast.error("เชื่อมต่อ Server ไม่ได้ กรุณาลองใหม่");
     } finally {
       setLoading(false);
     }
@@ -63,7 +81,10 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen bg-[#f1f7ff] flex flex-col font-sans overflow-hidden">
       
-      {/* --- Background & Nav (คงเดิม) --- */}
+      {/* --- วาง Toaster ไว้บนสุดของ Container หลัก เพื่อให้ Pop-up แสดงผลได้ --- */}
+      <Toaster position="top-center" reverseOrder={false} />
+
+      {/* --- โค้ดส่วน UI เดิมของนาย (ตัดมาเฉพาะส่วนสำคัญ) --- */}
       <nav className="w-full py-4 px-6 md:px-12 flex justify-between items-center bg-white/50 border-b border-gray-100 opacity-30 select-none">
         <div className="text-2xl font-black tracking-tighter italic text-black">Port<span className="text-[#1d7cf2]">Hub</span></div>
         <div className="w-10 h-10 rounded-full border-2 border-[#1d7cf2] flex items-center justify-center text-[#1d7cf2]">
@@ -75,7 +96,6 @@ export default function LoginPage() {
         <h1 className="text-[15vw] md:text-[14rem] font-black tracking-tighter leading-none text-black">Port<span className="text-[#1d7cf2]">Hub</span></h1>
       </main>
 
-      {/* --- Sign In Card --- */}
       <div className="absolute inset-0 flex items-center justify-center bg-black/5 backdrop-blur-[2px] p-4">
         <div className="bg-white w-full max-w-[400px] p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white">
           <h2 className="text-4xl font-black text-center mb-8 text-black tracking-tight">Sign in</h2>
@@ -112,17 +132,18 @@ export default function LoginPage() {
                 {loading ? "Checking..." : "Sign in"}
               </button>
               <div className="text-center">
-              <p className="text-sm text-gray-400 mt-2">Don't have an account? <Link href="/register" className="text-[#1d7cf2] hover:underline">Register</Link></p>
-            </div>
+                <p className="text-sm text-gray-400 mt-2">Don't have an account? <Link href="/register" className="text-[#1d7cf2] hover:underline">Register</Link></p>
+              </div>
             </div>
           </form>
         </div>
       </div>
 
-      {/* --- Popup Modal --- */}
+      {/* --- Popup Modal "ไม่พบบัญชี" (คงเดิมไว้) --- */}
       {showPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm p-8 rounded-[2rem] shadow-2xl text-center transform animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+           {/* ... โค้ดเดิมของนาย ... */}
+           <div className="bg-white w-full max-w-sm p-8 rounded-[2rem] shadow-2xl text-center">
             <div className="w-16 h-16 bg-blue-50 text-[#1d7cf2] rounded-full flex items-center justify-center mx-auto mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
@@ -130,7 +151,6 @@ export default function LoginPage() {
             </div>
             <h3 className="text-xl font-black text-black mb-2">ไม่พบบัญชีในระบบ</h3>
             <p className="text-sm text-gray-600 mb-6">ดูเหมือนว่าคุณยังไม่ได้เป็นสมาชิกกับเรา <br/>สมัครสมาชิกตอนนี้เพื่อเริ่มต้นใช้งาน</p>
-            
             <div className="flex flex-col space-y-3">
               <Link href="/register" className="w-full py-3 bg-[#1d7cf2] text-white font-bold rounded-xl hover:bg-[#1565c0] transition-colors">
                 สมัครสมาชิกใหม่

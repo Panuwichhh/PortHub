@@ -1,153 +1,202 @@
 "use client";
 
 import React from 'react';
+import { motion } from 'framer-motion';
+import { 
+  ArrowLeft, Mail, Phone, ExternalLink, 
+  GraduationCap, Code2, Briefcase, User, LogOut,
+  Award, Sparkles
+} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function ProfileDetailPage() {
-  const userData = {
-    name: "Cho yi hyun",
-    phone: "0975XXXXXX",
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    router.push('/login');
+  };
+
+  const user = {
+    name: "Cho Yi Hyun",
+    role: "Senior UI/UX Designer",
+    phone: "097-5XX-XXXX",
     email: "choyihyun1@gmail.com",
-    university: "University Name",
-    faculty: "Engineer",
-    major: "Software",
+    university: "Stanford University",
+    faculty: "Engineering",
+    major: "Software Engineering",
     gpax: "4.00",
-    skills: ["Wireframe", "Python", "Communication", "Resreach", "Planning"],
-    jobInterest: "Website Developer, Full-Stack Developer, Backend / Frontend Developer, UX/UI Designer",
+    skills: ["Wireframe", "Python", "Communication", "Research", "Planning"],
+    interests: "Website Developer, Full-Stack Developer, Backend / Frontend Developer, UX/UI Designer",
     projects: [
       {
         title: "UniConnect",
-        desc: "เป็นแอปพลิเคชันที่ออกแบบมาเพื่อสร้างชุมชนออนไลน์สำหรับนักศึกษาภายในมหาวิทยาลัย ช่วยให้พวก...",
-        img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=400"
+        category: "Web Application",
+        desc: "แอปพลิเคชันที่ออกแบบมาเพื่อสร้างชุมชนออนไลน์สำหรับนักศึกษาภายในมหาวิทยาลัย ช่วยให้การแลกเปลี่ยนความรู้เป็นเรื่องง่าย...",
+        img: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=600"
       },
       {
         title: "Leaf & Bloom",
-        desc: "เป็นโมบายแอปพลิเคชันที่ออกแบบมาเพื่อช่วยให้ผู้ที่รักการปลูกต้นไม้ในร่ม สามารถดูแล ...",
-        img: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=400"
+        category: "Mobile Design",
+        desc: "โมบายแอปพลิเคชันที่ช่วยให้ผู้รักการปลูกต้นไม้ในร่ม สามารถดูแลและวิเคราะห์สุขภาพต้นไม้ได้ผ่าน AI...",
+        img: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&q=80&w=600"
       }
     ]
   };
 
   return (
-    <div className="h-screen w-full bg-white font-sans text-black overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-[#f8faff] text-black font-sans pb-20">
       
-      {/* --- Header / Navbar --- */}
-      <nav className="h-14 shrink-0 px-6 flex justify-between items-center bg-white border-b border-gray-200 z-50">
-        <div className="text-2xl font-black italic tracking-tighter">
-          Port<span className="text-[#1d7cf2]">Hub</span>
+      {/* 🌟 Navbar: Full Functionality */}
+      <nav className="w-full bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 px-6 md:px-12 py-4 flex justify-between items-center">
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard">
+            <motion.div 
+              whileHover={{ x: -5 }}
+              className="p-2 bg-gray-50 hover:bg-white hover:shadow-sm rounded-xl transition-all text-gray-400 hover:text-[#1d7cf2] cursor-pointer"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </motion.div>
+          </Link>
+          <div className="text-2xl font-black italic tracking-tighter">
+            Port<span className="text-[#1d7cf2]">Hub</span>
+          </div>
         </div>
-        <div className="w-8 h-8 rounded-full border-2 border-[#1d7cf2] flex items-center justify-center text-[#1d7cf2]">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
+
+        <div className="flex items-center gap-5">
+          
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#1d7cf2] to-blue-400 flex items-center justify-center text-white shadow-lg shadow-blue-100">
+            <User className="w-6 h-6" />
+          </div>
         </div>
       </nav>
 
-      <div className="flex-1 flex flex-row overflow-hidden">
+      {/* --- Header Space --- */}
+      <div className="w-full h-32 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100/50" />
+
+      <main className="max-w-7xl mx-auto px-6 -mt-16 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* --- LEFT SIDEBAR (Profile) --- */}
-        <aside className="w-[340px] bg-white flex flex-col shrink-0 h-full overflow-y-auto border-r border-gray-100">
-          <div className="p-8 flex flex-col">
+        {/* 🌟 Left Column: Personal Identity Card */}
+        <aside className="lg:col-span-4 space-y-8 h-fit lg:sticky lg:top-24">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-[3.5rem] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-white text-center relative overflow-hidden"
+          >
+            {/* Profile Pic with Ring */}
+            <div className="relative w-44 h-44 mx-auto mb-8">
+              <div className="absolute inset-0 bg-blue-50 rounded-[3rem] rotate-6 border border-blue-100" />
+              <img 
+                src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300" 
+                alt="Avatar" 
+                className="relative w-full h-full rounded-[3rem] object-cover shadow-2xl border-4 border-white" 
+              />
+            </div>
+
+            <h1 className="text-3xl font-black tracking-tight mb-2">{user.name}</h1>
+            <p className="text-[#1d7cf2] font-black text-xs uppercase tracking-widest mb-8">{user.role}</p>
             
-            {/* Profile Image - Centered */}
-            <div className="flex justify-center mb-6">
-              <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-gray-100 shadow-sm">
-                <img 
-                  src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300" 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                />
+            <div className="space-y-3 bg-gray-50/50 p-6 rounded-[2rem] text-left border border-gray-100">
+              <div className="flex items-center gap-3 text-sm font-bold text-gray-600">
+                <Phone className="w-4 h-4 text-[#1d7cf2]" /> {user.phone}
+              </div>
+              <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
+                <Mail className="w-4 h-4 text-[#1d7cf2]" /> {user.email}
               </div>
             </div>
 
-            {/* Info Section - Left Aligned */}
-            <div className="text-left space-y-4">
-              <div>
-                <h1 className="text-2xl font-black text-gray-900 mb-2">{userData.name}</h1>
-                <div className="text-[13px] text-gray-600 space-y-1 font-medium">
-                  <p className="flex items-center gap-2">📞 {userData.phone}</p>
-                  <p className="flex items-center gap-2">✉️ {userData.email}</p>
+            <div className="mt-8 pt-8 border-t border-gray-50 text-left">
+              <div className="flex gap-4">
+                <div className="p-3 bg-blue-50 rounded-2xl text-[#1d7cf2] h-fit">
+                  <GraduationCap className="w-6 h-6" />
                 </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-black text-gray-900 mb-1">University Name</h2>
-                <div className="text-[14px] text-gray-700 font-medium space-y-0.5">
-                  <p>Faculty: {userData.faculty}</p>
-                  <p>Major: {userData.major}</p>
-                  <p>GPAX: {userData.gpax}</p>
-                </div>
-              </div>
-
-              {/* Skills Area */}
-              <div>
-                <h2 className="text-lg font-black text-gray-900 mb-3 uppercase tracking-tight">Skill</h2>
-                <div className="flex flex-wrap gap-2">
-                  {userData.skills.map((skill) => (
-                    <span key={skill} className="px-3 py-1 border border-[#1d7cf2] text-[#1d7cf2] bg-white rounded-md text-[12px] font-bold">
-                      {skill}
-                    </span>
-                  ))}
+                <div>
+                  <h4 className="font-black text-[10px] uppercase text-gray-400 tracking-widest">Education</h4>
+                  <p className="font-black text-gray-900 leading-tight mt-1">{user.university}</p>
+                  <p className="text-xs font-bold text-gray-500 mt-1">{user.faculty} | {user.major}</p>
+                  <p className="text-[10px] font-black text-[#1d7cf2] mt-2 bg-blue-50 inline-block px-2 py-0.5 rounded-lg">GPAX {user.gpax}</p>
                 </div>
               </div>
             </div>
+          </motion.div>
 
-          </div>
+          {/* Skill Bento Box */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-white"
+          >
+            <h4 className="font-black text-xs uppercase text-gray-400 tracking-widest mb-6 flex items-center gap-2">
+              <Code2 className="w-4 h-4 text-[#1d7cf2]" /> Technical Skills
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {user.skills.map((skill, idx) => (
+                <span key={idx} className="px-4 py-2 bg-gray-50 border border-gray-100 text-[10px] font-black text-gray-600 rounded-xl hover:bg-[#1d7cf2] hover:text-white transition-all cursor-default">
+                  {skill.toUpperCase()}
+                </span>
+              ))}
+            </div>
+          </motion.div>
         </aside>
 
-        {/* --- RIGHT CONTENT (Job & Projects) --- */}
-        <main className="flex-1 bg-[#f8fbff] p-10 overflow-hidden flex flex-col">
+        {/* 🌟 Right Column: Detailed Info & Projects */}
+        <section className="lg:col-span-8 space-y-8">
           
-          {/* Job Interest Section */}
-          <div className="mb-8">
-            <h2 className="text-[16px] font-black text-gray-900 mb-2">Job Interest</h2>
-            <p className="text-[#1d7cf2] text-xl font-black leading-tight max-w-2xl">
-              {userData.jobInterest}
+          {/* Job Interest Bento */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white rounded-[3rem] p-10 shadow-sm border border-white relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-5"><Sparkles className="w-24 h-24" /></div>
+            <h4 className="font-black text-xs uppercase text-[#1d7cf2] tracking-[0.2em] mb-4 flex items-center gap-2">
+              <Briefcase className="w-4 h-4" /> Career Objectives
+            </h4>
+            <p className="text-2xl font-black leading-snug text-gray-800 tracking-tight">
+              {user.interests}
             </p>
-          </div>
+          </motion.div>
 
-          {/* Divider Line */}
-          <div className="w-full h-px bg-gray-200 mb-8"></div>
-
-          {/* Projects Section */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <h2 className="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tight shrink-0">Project</h2>
+          {/* Project Grid */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-4">
+              <h2 className="text-3xl font-black tracking-tight">Featured <span className="text-[#1d7cf2]">Projects</span></h2>
+              <Award className="w-6 h-6 text-yellow-400" />
+            </div>
             
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-5">
-              {userData.projects.map((proj, idx) => (
-                <div key={idx} className="flex bg-white rounded-xl border border-blue-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow h-44 shrink-0">
-                  {/* Project Image */}
-                  <div className="w-48 h-full shrink-0">
-                    <img src={proj.img} className="w-full h-full object-cover" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {user.projects.map((project, idx) => (
+                <motion.div 
+                  key={idx}
+                  whileHover={{ y: -8 }}
+                  className="group bg-white rounded-[3rem] overflow-hidden shadow-sm border border-white flex flex-col h-full hover:shadow-[0_30px_60px_rgba(29,124,242,0.1)] transition-all duration-500"
+                >
+                  <div className="h-52 overflow-hidden relative">
+                    <img src={project.img} alt={project.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute top-5 left-5 px-3 py-1 bg-white/90 backdrop-blur-md rounded-full text-[9px] font-black uppercase tracking-widest text-[#1d7cf2]">
+                      {project.category}
+                    </div>
                   </div>
-                  
-                  {/* Project Details */}
-                  <div className="p-5 flex-1 flex flex-col justify-between">
+                  <div className="p-8 flex flex-col justify-between flex-1">
                     <div>
-                      <h3 className="text-lg font-black text-[#1d7cf2] mb-1">{proj.title}</h3>
-                      <p className="text-gray-500 text-[13px] font-medium leading-relaxed line-clamp-2">
-                        {proj.desc}
+                      <h3 className="text-xl font-black mb-3 group-hover:text-[#1d7cf2] transition-colors">{project.title}</h3>
+                      <p className="text-gray-400 text-xs font-bold leading-relaxed line-clamp-2">
+                        {project.desc}
                       </p>
                     </div>
-                    
-                    {/* Explore Button */}
-                    <div className="flex justify-end">
-                      <button className="bg-[#1d7cf2] text-white px-6 py-1.5 rounded-lg font-black text-[11px] shadow-sm hover:bg-blue-600 transition-colors">
-                        Explore
-                      </button>
-                    </div>
+                    <button className="mt-8 flex items-center justify-center gap-2 px-6 py-3.5 bg-black text-white w-full rounded-2xl font-black text-[10px] tracking-widest shadow-lg hover:bg-[#1d7cf2] transition-all transform active:scale-95">
+                      VIEW CASE STUDY <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
-        </main>
-      </div>
+        </section>
 
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-      `}</style>
+      </main>
     </div>
   );
 }

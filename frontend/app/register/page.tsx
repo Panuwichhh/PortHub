@@ -10,8 +10,41 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  // เพิ่ม State สำหรับเปิด/ปิดตา
   const [showPassword, setShowPassword] = useState(false);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillInputs, setSkillInputs] = useState<string[]>([""]);
+
+  const addSkillInput = () => setSkillInputs((prev) => [...prev, ""]);
+
+  const updateSkillInput = (index: number, value: string) => {
+    setSkillInputs((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  const addSkillFromInput = (index: number) => {
+    const value = skillInputs[index]?.trim();
+    if (value && !skills.includes(value)) {
+      setSkills((prev) => [...prev, value]);
+      setSkillInputs((prev) => {
+        const next = prev.filter((_, i) => i !== index);
+        return next.length > 0 ? next : [""];
+      });
+    }
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    setSkills((prev) => prev.filter((s) => s !== skillToRemove));
+  };
+
+  const removeSkillInput = (index: number) => {
+    setSkillInputs((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,18 +127,71 @@ export default function RegisterPage() {
                 <InputGroup label="Phone" placeholder="" />
               </div>
               
-              <div className="relative">
-                <label className="block text-[#1d7cf2] font-extrabold text-sm mb-1 ml-1 uppercase tracking-tight">Skills</label>
-                <div className="relative">
-                  <input type="text" className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-black focus:outline-none focus:ring-2 focus:ring-[#1d7cf2]/20 transition-all bg-white" />
-                  <button 
-                    type="button" 
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#1d7cf2] text-[#1d7cf2] hover:bg-[#1d7cf2] hover:text-white transition-all active:scale-90 shadow-sm"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </button>
+              <div>
+                <label className="block text-[#1d7cf2] font-extrabold text-sm mb-2 ml-1 uppercase tracking-tight">Skills</label>
+                <div className="rounded-xl border border-gray-300 bg-white p-4 space-y-3 focus-within:ring-2 focus-within:ring-[#1d7cf2]/20 transition-all">
+                  {/* แถว Tags + ปุ่ม + */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-[#1d7cf2]/30 text-[#1d7cf2] text-sm font-bold"
+                      >
+                        {skill}
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(skill)}
+                          className="hover:text-red-500 transition-colors"
+                          aria-label={`ลบ ${skill}`}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                            <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                          </svg>
+                        </button>
+                      </span>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addSkillInput}
+                      className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#1d7cf2] text-[#1d7cf2] hover:bg-[#1d7cf2] hover:text-white transition-all active:scale-90 shrink-0"
+                      aria-label="เพิ่มช่องกรอก skill"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                    </button>
+                  </div>
+                  {/* ช่องกรอก skill ที่เพิ่มจากปุ่ม + */}
+                  <div className="space-y-2">
+                    {skillInputs.map((value, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={value}
+                          onChange={(e) => updateSkillInput(index, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addSkillFromInput(index);
+                            }
+                          }}
+                          placeholder="พิมพ์ skill แล้วกด Enter เพื่อเพิ่ม"
+                          className="flex-1 px-3 py-2 rounded-lg border-0 border-b-2 border-[#1d7cf2]/30 bg-transparent text-black focus:outline-none focus:ring-0 focus:border-[#1d7cf2] transition-colors placeholder:text-gray-400 placeholder:text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSkillInput(index)}
+                          disabled={skillInputs.length <= 1}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-red-300 text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:pointer-events-none transition-all shrink-0"
+                          aria-label="ลบช่องนี้"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                            <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

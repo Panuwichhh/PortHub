@@ -11,13 +11,15 @@ import {
   GraduationCap, 
   Briefcase, 
   ExternalLink,
-  LogIn
+  LogIn,
+  DoorOpen
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [isGuest, setIsGuest] = useState(true); // เริ่มต้นเป็น Guest ก่อน
   const [isReady, setIsReady] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // --- 1. ตรวจสอบสิทธิ์แบบ Hybrid ---
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function DashboardPage() {
 
   // --- 2. ออกจากระบบ ---
   const handleLogout = () => {
+    setShowLogoutModal(false);
     localStorage.removeItem('token');
     router.push('/login');
   };
@@ -83,7 +86,7 @@ export default function DashboardPage() {
               <motion.button 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-red-500 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
@@ -178,6 +181,51 @@ export default function DashboardPage() {
       {/* Background Blobs */}
       <div className="fixed -top-24 -right-24 w-96 h-96 bg-[#1d7cf2]/5 rounded-full blur-[100px] pointer-events-none" />
       <div className="fixed -bottom-24 -left-24 w-96 h-96 bg-blue-400/5 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* Logout Confirmation Modal - แสดงเฉพาะเมื่อ user ที่ login กด Logout */}
+      {showLogoutModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowLogoutModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="logout-modal-title"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-[380px] p-8 text-center"
+          >
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 rounded-2xl bg-[#1d7cf2]/10 flex items-center justify-center">
+                <DoorOpen className="w-9 h-9 text-[#1d7cf2]" />
+              </div>
+            </div>
+            <h3 id="logout-modal-title" className="text-xl font-black text-[#1d7cf2] mb-1">
+              You leaving...
+            </h3>
+            <p className="text-[#1d7cf2] font-bold text-sm mb-8">Are you sure ?</p>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-3 rounded-xl bg-[#1d7cf2] text-white font-black text-sm uppercase tracking-wide hover:bg-[#1565c0] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white font-black text-sm uppercase tracking-wide hover:bg-red-600 transition-colors"
+              >
+                Log out
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

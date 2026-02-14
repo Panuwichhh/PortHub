@@ -4,46 +4,24 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, Mail, Phone, ExternalLink, 
-  GraduationCap, Code2, Briefcase, User, LogOut,
+  GraduationCap, Code2, Briefcase, User,
   Award, Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import { mockUser } from './mockProfileData';
 
 export default function ProfileDetailPage() {
   const router = useRouter();
+  const params = useParams();
+  const userId = params.id ?? '';
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     router.push('/login');
   };
 
-  const user = {
-    name: "Cho Yi Hyun",
-    role: "Senior UI/UX Designer",
-    phone: "097-5XX-XXXX",
-    email: "choyihyun1@gmail.com",
-    university: "Stanford University",
-    faculty: "Engineering",
-    major: "Software Engineering",
-    gpax: "4.00",
-    skills: ["Wireframe", "Python", "Communication", "Research", "Planning"],
-    interests: "Website Developer, Full-Stack Developer, Backend / Frontend Developer, UX/UI Designer",
-    projects: [
-      {
-        title: "UniConnect",
-        category: "Web Application",
-        desc: "แอปพลิเคชันที่ออกแบบมาเพื่อสร้างชุมชนออนไลน์สำหรับนักศึกษาภายในมหาวิทยาลัย ช่วยให้การแลกเปลี่ยนความรู้เป็นเรื่องง่าย...",
-        img: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=600"
-      },
-      {
-        title: "Leaf & Bloom",
-        category: "Mobile Design",
-        desc: "โมบายแอปพลิเคชันที่ช่วยให้ผู้รักการปลูกต้นไม้ในร่ม สามารถดูแลและวิเคราะห์สุขภาพต้นไม้ได้ผ่าน AI...",
-        img: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&q=80&w=600"
-      }
-    ]
-  };
+  const user = mockUser;
 
   return (
     <div className="min-h-screen bg-[#f8faff] text-black font-sans pb-20">
@@ -186,9 +164,11 @@ export default function ProfileDetailPage() {
                         {project.desc}
                       </p>
                     </div>
-                    <button className="mt-8 flex items-center justify-center gap-2 px-6 py-3.5 bg-black text-white w-full rounded-2xl font-black text-[10px] tracking-widest shadow-lg hover:bg-[#1d7cf2] transition-all transform active:scale-95">
-                      VIEW CASE STUDY <ExternalLink className="w-3.5 h-3.5" />
-                    </button>
+                    <Link href={`/profile/${userId}/project/${idx}`}>
+                      <button type="button" className="mt-8 flex items-center justify-center gap-2 px-6 py-3.5 bg-black text-white w-full rounded-2xl font-black text-[10px] tracking-widest shadow-lg hover:bg-[#1d7cf2] transition-all transform active:scale-95">
+                        VIEW CASE STUDY <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    </Link>
                   </div>
                 </motion.div>
               ))}

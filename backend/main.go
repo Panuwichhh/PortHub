@@ -53,6 +53,8 @@ func main() {
 	api := r.Group("/api")
 	{
 		routes.AuthRoutes(api, db)
+		routes.UserRoutes(api, db)
+
 	}
 
 	// 4. เริ่มรัน Server

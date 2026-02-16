@@ -2,6 +2,8 @@ package routes
 
 import (
 	"backend/controllers"
+	"backend/handlers"
+	"backend/middleware"
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
@@ -36,4 +38,16 @@ func AuthRoutes(rg *gin.RouterGroup, db *sql.DB) {
 	rg.POST("/reset-password", func(c *gin.Context) {
 		controllers.ResetPassword(c, db)
 	})
+}
+
+func UserRoutes(rg *gin.RouterGroup, db *sql.DB) {
+
+	users := rg.Group("/users")
+	users.Use(middleware.AuthMiddleware())
+	{
+		users.GET("/me", handlers.GetMe(db))
+		users.PUT("/me", handlers.UpdateMe(db))
+		users.GET("/me/skills", handlers.GetMySkills(db))
+
+	}
 }

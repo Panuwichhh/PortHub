@@ -24,41 +24,152 @@ type User struct {
 // 1. Register: สมัครสมาชิก
 // ---------------------------------------------------------
 func Register(c *gin.Context, db *sql.DB) {
-	var input User
+
+	var input struct {
+		Email       string   `json:"email"`
+		Password    string   `json:"password"`
+		UserName    string   `json:"user_name"`
+		University  string   `json:"university"`
+		Faculty     string   `json:"faculty"`
+		Major       string   `json:"major"`
+		GPA         float64  `json:"gpa"`
+		JobInterest string   `json:"job_interest"`
+		Skills      []string `json:"skills"`
+	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
 		return
 	}
 
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	emailNorm := strings.ToLower(strings.TrimSpace(input.Email))
 
-	query := "INSERT INTO users (email, password_hash) VALUES ($1, $2)"
-	_, err := db.Exec(query, emailNorm, string(hashedPassword))
-	if err != nil {
-		fmt.Println("❌ Register Error:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "อีเมลนี้ถูกใช้งานแล้ว"})
+	if emailNorm == "" || input.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "กรุณากรอก email และ password"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "สมัครสมาชิกสำเร็จ!"})
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "hash password ไม่สำเร็จ"})
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+		return
+	}
+
+	var userID int
+
+	userQuery := `
+	INSERT INTO users 
+	(email, password_hash, user_name, university, faculty, major, gpa, job_interest)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+	RETURNING user_id
+	`
+
+	err = tx.QueryRow(userQuery,
+		emailNorm,
+		string(hashedPassword),
+		input.UserName,
+		input.University,
+		input.Faculty,
+		input.Major,
+		input.GPA,
+		input.JobInterest,
+	).Scan(&userID)
+
+	if err != nil {
+		tx.Rollback()
+		fmt.Println("❌ Insert user error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "อีเมลนี้ถูกใช้งานแล้ว"})
+		return
+	}
+	fmt.Println("Skills from frontend:", input.Skills)
+
+	// Insert skills
+	for _, skillName := range input.Skills {
+
+		skillName = strings.TrimSpace(skillName)
+		if skillName == "" {
+			continue
+		}
+
+		var skillID int
+
+		// เช็คว่ามี skill นี้แล้วหรือยัง
+		err := tx.QueryRow(
+			"SELECT skill_id FROM skills WHERE LOWER(skill_name)=LOWER($1)",
+			skillName,
+		).Scan(&skillID)
+
+		if err == sql.ErrNoRows {
+			// ยังไม่มี → สร้างใหม่
+			err = tx.QueryRow(
+				"INSERT INTO skills (skill_name) VALUES ($1) RETURNING skill_id",
+				skillName,
+			).Scan(&skillID)
+
+			if err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Insert skill error"})
+				return
+			}
+		} else if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Skill lookup error"})
+			return
+		}
+
+		// ผูก skill กับ user
+		_, err = tx.Exec(
+			"INSERT INTO user_skills (user_id, skill_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
+			userID,
+			skillID,
+		)
+
+		if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Insert user skill error"})
+			return
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Commit error"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "สมัครสมาชิกสำเร็จ!",
+		"user_id": userID,
+	})
 }
 
 // ---------------------------------------------------------
 // 2. Login: เข้าสู่ระบบ
 // ---------------------------------------------------------
 func Login(c *gin.Context, db *sql.DB) {
+
 	var input User
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
 		return
 	}
 
-	var storedPassword string
 	emailNorm := strings.ToLower(strings.TrimSpace(input.Email))
-	query := "SELECT password_hash FROM users WHERE LOWER(email) = $1"
-	err := db.QueryRow(query, emailNorm).Scan(&storedPassword)
+	fmt.Println("LOGIN EMAIL INPUT:", emailNorm)
+
+	var storedPassword string
+	var userID int
+
+	query := "SELECT user_id, password_hash FROM users WHERE LOWER(email) = $1"
+	err := db.QueryRow(query, emailNorm).Scan(&userID, &storedPassword)
 	if err != nil {
+		fmt.Println("LOGIN QUERY ERROR:", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่พบอีเมลนี้ในระบบ"})
 		return
 	}
@@ -68,7 +179,17 @@ func Login(c *gin.Context, db *sql.DB) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "เข้าสู่ระบบสำเร็จ!", "token": "fake-jwt-token"})
+	// สร้าง JWT โดยใช้ user_id
+	token, err := utils.GenerateToken(fmt.Sprintf("%d", userID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง token ได้"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "เข้าสู่ระบบสำเร็จ!",
+		"token":   token,
+	})
 }
 
 // ---------------------------------------------------------

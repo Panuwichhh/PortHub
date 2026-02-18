@@ -1,0 +1,58 @@
+services:
+  # 1. Database (PostgreSQL)
+  db:
+    image: postgres:16-alpine
+    container_name: porthub-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "190946"
+      POSTGRES_DB: porthub_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d porthub_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Backend (Go API)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: porthub-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: "190946"
+      DB_NAME: porthub_db
+      PORT: "8080"
+      CORS_ORIGIN: "http://localhost:3000"
+    ports:
+      - "8080:8080"
+
+  # 3. Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:8080/api"
+    container_name: porthub-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

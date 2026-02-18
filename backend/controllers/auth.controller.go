@@ -29,6 +29,7 @@ func Register(c *gin.Context, db *sql.DB) {
 		Email       string   `json:"email"`
 		Password    string   `json:"password"`
 		UserName    string   `json:"user_name"`
+		Phone       string   `json:"phone"`
 		University  string   `json:"university"`
 		Faculty     string   `json:"faculty"`
 		Major       string   `json:"major"`
@@ -65,8 +66,8 @@ func Register(c *gin.Context, db *sql.DB) {
 
 	userQuery := `
 	INSERT INTO users 
-	(email, password_hash, user_name, university, faculty, major, gpa, job_interest)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+	(email, password_hash, user_name, phone, university, faculty, major, gpa, job_interest)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 	RETURNING user_id
 	`
 
@@ -74,6 +75,7 @@ func Register(c *gin.Context, db *sql.DB) {
 		emailNorm,
 		string(hashedPassword),
 		input.UserName,
+		input.Phone,
 		input.University,
 		input.Faculty,
 		input.Major,
@@ -237,9 +239,12 @@ func ForgotPassword(c *gin.Context, db *sql.DB) {
 
 	// 4. ส่งเมล (ใช้ email จาก DB เพื่อส่งไปที่ถูกต้อง)
 	err = utils.SendOTPEmail(dbEmail, otp)
+	
+	// แสดง OTP ใน Terminal เสมอเพื่อ debug
+	fmt.Printf("\n🔑 [DEBUG] OTP Code: %s (Email: %s)\n\n", otp, dbEmail)
+	
 	if err != nil {
 		fmt.Println("⚠️ Email Send Error (OTP still saved):", err)
-		fmt.Printf("\n>>> [TERMINAL DEBUG] OTP IS: %s <<<\n\n", otp)
 		// คืน 200 เพื่อให้ frontend เด้งไปหน้า verify-email ได้ (ใช้รหัสจาก Terminal เทส)
 		c.JSON(http.StatusOK, gin.H{"message": "ส่งรหัส OTP เรียบร้อยแล้ว (รหัสแสดงใน Terminal เพราะส่งเมลยังไม่สำเร็จ)"})
 		return

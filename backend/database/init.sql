@@ -1,15 +1,17 @@
 -- 1. สร้างตาราง USERS (เก็บข้อมูลพื้นฐาน)
 CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
-    user_name VARCHAR(100),
+    user_name VARCHAR(255),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
+    phone VARCHAR(50),
     university VARCHAR(255),
     faculty VARCHAR(255),
     major VARCHAR(255),
     gpa DECIMAL(3,2),
     job_interest TEXT,
     profile_image_url TEXT,
+    show_on_dashboard BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

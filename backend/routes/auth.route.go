@@ -47,7 +47,21 @@ func UserRoutes(rg *gin.RouterGroup, db *sql.DB) {
 	{
 		users.GET("/me", handlers.GetMe(db))
 		users.PUT("/me", handlers.UpdateMe(db))
+		users.DELETE("/me", handlers.DeleteMe(db))
 		users.GET("/me/skills", handlers.GetMySkills(db))
+		users.GET("/me/projects", handlers.GetMyProjects(db))
+		users.POST("/me/projects", handlers.CreateProject(db))
+		users.DELETE("/me/projects/:id", handlers.DeleteProject(db))
+		users.PUT("/me/dashboard-visibility", handlers.SetDashboardVisibility(db))
+	}
+}
 
+// DashboardRoutes registers dashboard APIs: list (auth) and public profile (no auth).
+func DashboardRoutes(rg *gin.RouterGroup, db *sql.DB) {
+	dashboard := rg.Group("/dashboard")
+	{
+		dashboard.GET("/profiles", middleware.AuthMiddleware(), handlers.GetDashboardProfiles(db))
+		dashboard.GET("/public-profiles", handlers.GetPublicDashboardProfiles(db))
+		dashboard.GET("/profiles/:id", handlers.GetPublicProfile(db))
 	}
 }

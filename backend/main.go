@@ -17,8 +17,24 @@ func main() {
 	if host == "" {
 		host = "localhost"
 	}
+	portDB := os.Getenv("DB_PORT")
+	if portDB == "" {
+		portDB = "5432"
+	}
+	userDB := os.Getenv("DB_USER")
+	if userDB == "" {
+		userDB = "postgres"
+	}
+	passDB := os.Getenv("DB_PASSWORD")
+	if passDB == "" {
+		passDB = "190946"
+	}
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		dbName = "porthub_db"
+	}
 
-	connStr := fmt.Sprintf("host=%s port=5432 user=postgres password=190946 dbname=porthub_db sslmode=disable", host)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, portDB, userDB, passDB, dbName)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("❌ Error opening database:", err)
@@ -30,12 +46,24 @@ func main() {
 	}
 	fmt.Println("✅ Database connected successfully")
 
+	// รัน migration: เพิ่มคอลัมน์ show_on_dashboard ถ้ายังไม่มี (ไม่ต้องรัน SQL เอง)
+	_, err = db.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS show_on_dashboard BOOLEAN DEFAULT false")
+	if err != nil {
+		log.Printf("⚠️ Migration show_on_dashboard (อาจมีอยู่แล้ว): %v", err)
+	} else {
+		fmt.Println("✅ Migration: show_on_dashboard column OK")
+	}
+
 	// 2. สร้าง Server
 	r := gin.Default()
 
 	// --- Middleware สำหรับ CORS (แก้ไขให้ครอบคลุม) ---
+	allowOrigin := os.Getenv("CORS_ORIGIN")
+	if allowOrigin == "" {
+		allowOrigin = "http://localhost:3000"
+	}
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Origin, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -54,7 +82,7 @@ func main() {
 	{
 		routes.AuthRoutes(api, db)
 		routes.UserRoutes(api, db)
-
+		routes.DashboardRoutes(api, db)
 	}
 
 	// 4. เริ่มรัน Server

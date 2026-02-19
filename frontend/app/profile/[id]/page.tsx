@@ -265,7 +265,7 @@ export default function ProfileDetailPage() {
           const mappedData: ProfileData = {
             user_id: pub.user_id,
             user_name: pub.user_name || 'No Name',
-            email: '',
+            email: pub.email ?? '',
             phone: pub.phone || '',
             university: pub.university || 'No University',
             faculty: pub.faculty || 'No Faculty',

@@ -182,6 +182,11 @@ export default function ProfileDetailPage() {
           images: Array.isArray(p.images) ? p.images : [],
         })) : [];
         setProjects(list);
+        if (typeof window !== 'undefined' && userId) {
+          try {
+            sessionStorage.setItem(getStorageKey(userId), JSON.stringify(list));
+          } catch (_) {}
+        }
         setProjectsLoaded(true);
       })
       .catch(() => {
@@ -287,6 +292,11 @@ export default function ProfileDetailPage() {
               }))
             : [];
           setProjects(projList);
+          if (typeof window !== 'undefined') {
+            try {
+              sessionStorage.setItem(getStorageKey(userId), JSON.stringify(projList));
+            } catch (_) {}
+          }
         } catch (e) {
           console.error('Fetch public profile error:', e);
           toast.error('Profile not found or not published to Dashboard');

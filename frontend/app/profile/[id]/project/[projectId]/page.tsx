@@ -18,11 +18,12 @@ interface Project {
 // ✅ ใช้ storage key เดียวกับ profile page
 const getStorageKey = (userId: string) => `porthub_projects_${userId}`;
 
-// ─── โหลด projects จาก localStorage ────────────────────────────────────────
+// ─── โหลด projects จาก sessionStorage (โปรเจกต์คนอื่นจาก API) หรือ localStorage (โปรเจกต์ของตัวเอง) ───
 const loadProjectsFromStorage = (userId: string): Project[] => {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(getStorageKey(userId));
+    const key = getStorageKey(userId);
+    const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
     console.log('📂 [Project Detail] Loading projects for user:', userId);
     if (!raw) {
       console.log('📂 [Project Detail] No projects found');

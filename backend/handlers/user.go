@@ -461,6 +461,7 @@ func GetPublicProfile(db *sql.DB) gin.HandlerFunc {
 		}
 		var (
 			userName        sql.NullString
+			email           sql.NullString
 			phone           sql.NullString
 			university      sql.NullString
 			faculty         sql.NullString
@@ -471,11 +472,11 @@ func GetPublicProfile(db *sql.DB) gin.HandlerFunc {
 			showOnDashboard bool
 		)
 		row := db.QueryRow(`
-			SELECT user_name, phone, university, faculty, major, gpa, job_interest, profile_image_url, COALESCE(show_on_dashboard, false)
+			SELECT user_name, email, phone, university, faculty, major, gpa, job_interest, profile_image_url, COALESCE(show_on_dashboard, false)
 			FROM users
 			WHERE user_id = $1
 		`, targetID)
-		if err := row.Scan(&userName, &phone, &university, &faculty, &major, &gpaStr, &jobInterest, &profileImageURL, &showOnDashboard); err != nil {
+		if err := row.Scan(&userName, &email, &phone, &university, &faculty, &major, &gpaStr, &jobInterest, &profileImageURL, &showOnDashboard); err != nil {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 				return
@@ -547,6 +548,7 @@ func GetPublicProfile(db *sql.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{
 			"user_id":           targetID,
 			"user_name":         userName.String,
+			"email":             email.String,
 			"phone":             phone.String,
 			"university":        university.String,
 			"faculty":           faculty.String,

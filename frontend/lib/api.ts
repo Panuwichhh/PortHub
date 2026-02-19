@@ -218,6 +218,7 @@ export const userAPI = {
   getPublicProfile: async (userId: string): Promise<{
     user_id: number;
     user_name: string;
+    email?: string;
     phone?: string;
     university: string;
     faculty: string;
@@ -231,6 +232,7 @@ export const userAPI = {
     return fetchAPI(`/dashboard/profiles/${userId}`, { method: 'GET' }) as Promise<{
       user_id: number;
       user_name: string;
+      email?: string;
       phone?: string;
       university: string;
       faculty: string;

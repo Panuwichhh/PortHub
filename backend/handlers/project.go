@@ -54,7 +54,7 @@ func GetMyProjects(db *sql.DB) gin.HandlerFunc {
 				img = images[0]
 			}
 			list = append(list, gin.H{
-				"id":     "p" + strconv.Itoa(projectID),
+				"id":     strconv.Itoa(projectID),
 				"title":  name.String,
 				"desc":   desc.String,
 				"img":    img,
@@ -113,7 +113,7 @@ func CreateProject(db *sql.DB) gin.HandlerFunc {
 			img = input.Images[0]
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"id":     "p" + strconv.Itoa(projectID),
+			"id":     strconv.Itoa(projectID),
 			"title":  input.Title,
 			"desc":   input.Desc,
 			"img":    img,
@@ -122,7 +122,7 @@ func CreateProject(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// DeleteProject deletes a project by id (e.g. "p123" -> project_id 123).
+// DeleteProject deletes a project by id (e.g. "123" or "p123" -> project_id 123).
 func DeleteProject(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userIDValue, exists := c.Get("user_id")
@@ -137,11 +137,14 @@ func DeleteProject(db *sql.DB) gin.HandlerFunc {
 		}
 
 		idStr := c.Param("id")
-		if len(idStr) < 2 || idStr[0] != 'p' {
+		if idStr == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project id"})
 			return
 		}
-		projectID, err := strconv.Atoi(idStr[1:])
+		if len(idStr) > 1 && idStr[0] == 'p' {
+			idStr = idStr[1:]
+		}
+		projectID, err := strconv.Atoi(idStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project id"})
 			return

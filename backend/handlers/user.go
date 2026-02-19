@@ -534,7 +534,7 @@ func GetPublicProfile(db *sql.DB) gin.HandlerFunc {
 					img = images[0]
 				}
 				projects = append(projects, gin.H{
-					"id": "p" + strconv.Itoa(projectID),
+					"id": strconv.Itoa(projectID),
 					"title": name.String,
 					"desc": desc.String,
 					"img": img,

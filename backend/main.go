@@ -82,6 +82,7 @@ func main() {
 	{
 		routes.AuthRoutes(api, db)
 		routes.UserRoutes(api, db)
+		routes.ProjectRoutes(api, db)
 		routes.DashboardRoutes(api, db)
 	}
 

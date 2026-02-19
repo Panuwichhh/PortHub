@@ -373,18 +373,13 @@ export default function ProjectCaseStudyPage() {
               ))}
             </div>
           )}
-          {imageCount <= 1 && (
+          {imageCount === 1 && (
             <div className="flex justify-center gap-2.5 py-6 bg-gradient-to-t from-white via-white/95 to-transparent">
-              {[0, 1, 2, 3, 4].map((idx) => (
-                <motion.span
-                  key={idx}
-                  initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.5 + idx * 0.1 }}
-                  className={`w-2.5 h-2.5 rounded-full shadow-md ${
-                    idx <= 1 ? "bg-gradient-to-r from-[#1d7cf2] to-purple-500" : "bg-[#1d7cf2]/20"
-                  }`}
-                />
-              ))}
+              <motion.span
+                initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="w-2.5 h-2.5 rounded-full shadow-md bg-gradient-to-r from-[#1d7cf2] to-purple-500"
+              />
             </div>
           )}
         </motion.div>

@@ -68,6 +68,70 @@ func GetMyProjects(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// GetProjectByID returns a single project by id (e.g. "7" or "p7"). Auth required; returns only current user's project.
+func GetProjectByID(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userIDValue, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		userID, ok := userIDValue.(int)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
+			return
+		}
+
+		idStr := c.Param("id")
+		if idStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project id"})
+			return
+		}
+		if len(idStr) > 1 && idStr[0] == 'p' {
+			idStr = idStr[1:]
+		}
+		projectID, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project id"})
+			return
+		}
+
+		var name, desc, imageURL sql.NullString
+		err = db.QueryRow(`
+			SELECT project_name, description, image_url
+			FROM projects
+			WHERE project_id = $1 AND user_id = $2
+		`, projectID, userID).Scan(&name, &desc, &imageURL)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+			return
+		}
+
+		images := []string{}
+		if imageURL.Valid && imageURL.String != "" {
+			_ = json.Unmarshal([]byte(imageURL.String), &images)
+		}
+		if images == nil {
+			images = []string{}
+		}
+		img := ""
+		if len(images) > 0 {
+			img = images[0]
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"id":     strconv.Itoa(projectID),
+			"title":  name.String,
+			"desc":   desc.String,
+			"img":    img,
+			"images": images,
+		})
+	}
+}
+
 // CreateProject creates a new project for the current user.
 func CreateProject(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {

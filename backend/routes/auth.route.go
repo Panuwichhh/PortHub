@@ -56,6 +56,15 @@ func UserRoutes(rg *gin.RouterGroup, db *sql.DB) {
 	}
 }
 
+// ProjectRoutes registers GET /api/projects/:id for fetching a single project by id (auth required).
+func ProjectRoutes(rg *gin.RouterGroup, db *sql.DB) {
+	projects := rg.Group("/projects")
+	projects.Use(middleware.AuthMiddleware())
+	{
+		projects.GET("/:id", handlers.GetProjectByID(db))
+	}
+}
+
 // DashboardRoutes registers dashboard APIs: list (auth) and public profile (no auth).
 func DashboardRoutes(rg *gin.RouterGroup, db *sql.DB) {
 	dashboard := rg.Group("/dashboard")

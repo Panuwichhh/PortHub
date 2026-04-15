@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { userAPI, tokenManager } from "@/lib/api";
 
 // ─── ใช้ interface เดียวกับ profile page ────────────────────────────────────
 interface Project {
@@ -54,26 +55,70 @@ export default function ProjectCaseStudyPage() {
   const lastDragOffset = useRef(0);
   const isDraggingRef = useRef(false);
 
-  // ✅ โหลด project จาก localStorage หา id ที่ตรงกัน
+  // ✅ โหลด project จาก API ก่อน (กรณีเจ้าของโปรไฟล์) และ fallback ไป storage
   useEffect(() => {
     if (!userId || !projectId) return;
-    
-    console.log('🔍 [Project Detail] Looking for project:', projectId);
-    const all = loadProjectsFromStorage(userId);
-    console.log('📋 [Project Detail] All projects:', all);
-    
-    const found = all.find(p => p.id === projectId);
-    
-    if (found) {
-      console.log('✅ [Project Detail] Found project:', found);
-      setProject(found);
-      setNotFound(false);
-    } else {
-      console.log('❌ [Project Detail] Project not found');
-      setNotFound(true);
-    }
-    
-    setLoading(false);
+    setLoading(true);
+    setNotFound(false);
+    setProject(null);
+    setCurrentImageIndex(0);
+
+    const loadProject = async () => {
+      console.log('🔍 [Project Detail] Looking for project:', projectId);
+
+      if (tokenManager.hasToken()) {
+        try {
+          const me = await userAPI.getMe();
+          if (me.user_id.toString() === userId) {
+            const single = await userAPI.getMyProjectById(projectId);
+            const normalizedProject: Project = {
+              id: single.id,
+              title: single.title,
+              desc: single.desc,
+              img: single.img ?? '',
+              images: Array.isArray(single.images) ? single.images : [],
+            };
+            const apiProjects = await userAPI.getMyProjects();
+            const normalized = Array.isArray(apiProjects)
+              ? apiProjects.map((p: { id: string; title: string; desc: string; img?: string; images?: string[] }) => ({
+                id: p.id,
+                title: p.title,
+                desc: p.desc,
+                img: p.img ?? '',
+                images: Array.isArray(p.images) ? p.images : [],
+              }))
+              : [];
+            if (typeof window !== "undefined") {
+              try {
+                sessionStorage.setItem(getStorageKey(userId), JSON.stringify(normalized));
+              } catch {}
+            }
+            console.log('✅ [Project Detail] Found project from API:', normalizedProject);
+            setProject(normalizedProject);
+            setNotFound(false);
+            setLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.warn('⚠️ [Project Detail] API fetch failed, fallback to storage', error);
+        }
+      }
+
+      const all = loadProjectsFromStorage(userId);
+      console.log('📋 [Project Detail] All projects from storage:', all);
+      const found = all.find(p => p.id === projectId);
+      if (found) {
+        console.log('✅ [Project Detail] Found project from storage:', found);
+        setProject(found);
+        setNotFound(false);
+      } else {
+        console.log('❌ [Project Detail] Project not found');
+        setNotFound(true);
+      }
+      setLoading(false);
+    };
+
+    loadProject();
   }, [userId, projectId]);
 
   const images = useMemo(() => {
@@ -85,6 +130,16 @@ export default function ProjectCaseStudyPage() {
   }, [project]);
 
   const imageCount = images.length;
+
+  useEffect(() => {
+    if (imageCount === 0) {
+      setCurrentImageIndex(0);
+      return;
+    }
+    if (currentImageIndex >= imageCount) {
+      setCurrentImageIndex(0);
+    }
+  }, [imageCount, currentImageIndex]);
 
   const goPrev = useCallback(() => {
     setCurrentImageIndex((i) => (i <= 0 ? imageCount - 1 : i - 1));

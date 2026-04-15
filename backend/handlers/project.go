@@ -68,8 +68,13 @@ func GetMyProjects(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+<<<<<<< Updated upstream
 // GetProjectByID returns a single project by id (e.g. "7" or "p7"). Auth required; returns only current user's project.
 func GetProjectByID(db *sql.DB) gin.HandlerFunc {
+=======
+// GetMyProjectByID returns one project for the current user by id.
+func GetMyProjectByID(db *sql.DB) gin.HandlerFunc {
+>>>>>>> Stashed changes
 	return func(c *gin.Context) {
 		userIDValue, exists := c.Get("user_id")
 		if !exists {
@@ -102,11 +107,19 @@ func GetProjectByID(db *sql.DB) gin.HandlerFunc {
 			FROM projects
 			WHERE project_id = $1 AND user_id = $2
 		`, projectID, userID).Scan(&name, &desc, &imageURL)
+<<<<<<< Updated upstream
 		if err != nil {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 				return
 			}
+=======
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+		if err != nil {
+>>>>>>> Stashed changes
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
 			return
 		}
@@ -122,6 +135,10 @@ func GetProjectByID(db *sql.DB) gin.HandlerFunc {
 		if len(images) > 0 {
 			img = images[0]
 		}
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 		c.JSON(http.StatusOK, gin.H{
 			"id":     strconv.Itoa(projectID),
 			"title":  name.String,
@@ -227,5 +244,77 @@ func DeleteProject(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "Deleted"})
+	}
+}
+
+// UpdateProject updates a project by id for the current user.
+func UpdateProject(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userIDValue, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		userID, ok := userIDValue.(int)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
+			return
+		}
+
+		idStr := c.Param("id")
+		if idStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project id"})
+			return
+		}
+		if len(idStr) > 1 && idStr[0] == 'p' {
+			idStr = idStr[1:]
+		}
+		projectID, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project id"})
+			return
+		}
+
+		var input struct {
+			Title  string   `json:"title"`
+			Desc   string   `json:"desc"`
+			Images []string `json:"images"`
+		}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+			return
+		}
+
+		imageJSON, _ := json.Marshal(input.Images)
+		if input.Images == nil {
+			imageJSON = []byte("[]")
+		}
+
+		result, err := db.Exec(`
+			UPDATE projects
+			SET project_name = $1, description = $2, image_url = $3
+			WHERE project_id = $4 AND user_id = $5
+		`, input.Title, input.Desc, string(imageJSON), projectID, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update project"})
+			return
+		}
+		rows, _ := result.RowsAffected()
+		if rows == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+
+		img := ""
+		if len(input.Images) > 0 {
+			img = input.Images[0]
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"id":     strconv.Itoa(projectID),
+			"title":  input.Title,
+			"desc":   input.Desc,
+			"img":    img,
+			"images": input.Images,
+		})
 	}
 }

@@ -177,9 +177,18 @@ export const userAPI = {
     const res = await fetchAPI('/users/me/projects', { method: 'GET' });
     return Array.isArray(res) ? res : [];
   },
+  getMyProjectById: async (id: string): Promise<{ id: string; title: string; desc: string; img: string; images: string[] }> => {
+    return fetchAPI(`/users/me/projects/${id}`, { method: 'GET' }) as Promise<{ id: string; title: string; desc: string; img: string; images: string[] }>;
+  },
   createProject: async (data: { title: string; desc: string; images: string[] }) => {
     return fetchAPI('/users/me/projects', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  updateProject: async (id: string, data: { title: string; desc: string; images: string[] }) => {
+    return fetchAPI(`/users/me/projects/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   },

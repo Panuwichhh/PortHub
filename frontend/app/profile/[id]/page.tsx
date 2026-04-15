@@ -62,6 +62,7 @@ const saveProjectsToStorage = (userId: string, projects: Project[]) => {
     console.log('💾 Saving projects... Size:', sizeKB, 'KB');
     
     localStorage.setItem(getStorageKey(userId), jsonStr);
+    sessionStorage.setItem(getStorageKey(userId), jsonStr);
     console.log('✅ Saved successfully!');
   } catch (error) {
     console.error('❌ Error saving projects:', error);
@@ -143,7 +144,7 @@ export default function ProfileDetailPage() {
 
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
   const [editProjectData, setEditProjectData] = useState({ title: '', desc: '' });
-  const [projectGalleryFiles, setProjectGalleryFiles] = useState<File[]>([]);
+  const [editProjectIdx, setEditProjectIdx] = useState<number | null>(null);
   const [projectGalleryPreviews, setProjectGalleryPreviews] = useState<string[]>([]);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -310,9 +311,17 @@ export default function ProfileDetailPage() {
     }
   };
 
-  const openEditProjectModal = () => {
+  const openEditProjectModal = (idx: number | null = null) => {
+    if (idx !== null && projects[idx]) {
+      const selected = projects[idx];
+      setEditProjectIdx(idx);
+      setEditProjectData({ title: selected.title, desc: selected.desc });
+      setProjectGalleryPreviews(selected.images?.length ? selected.images : (selected.img ? [selected.img] : []));
+      setShowEditProjectModal(true);
+      return;
+    }
+    setEditProjectIdx(null);
     setEditProjectData({ title: '', desc: '' });
-    setProjectGalleryFiles([]);
     setProjectGalleryPreviews([]);
     setShowEditProjectModal(true);
   };
@@ -321,7 +330,7 @@ export default function ProfileDetailPage() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     
-    const totalFiles = projectGalleryFiles.length + files.length;
+    const totalFiles = projectGalleryPreviews.length + files.length;
     if (totalFiles > 4) {
       alert('สามารถอัปโหลดได้สูงสุด 4 รูปเท่านั้น! 🚫');
       return;
@@ -334,19 +343,17 @@ export default function ProfileDetailPage() {
       return;
     }
 
-    // Compress images และสร้าง previews
+    // Compress images และใช้ผลลัพธ์เป็นรูปที่ต้องบันทึกจริง
     const newPreviews: string[] = [];
     for (const file of files) {
-      const preview = URL.createObjectURL(file);
+      const preview = await compressImage(file, 800, 0.7);
       newPreviews.push(preview);
     }
 
-    setProjectGalleryFiles(prev => [...prev, ...files]);
     setProjectGalleryPreviews(prev => [...prev, ...newPreviews]);
   };
 
   const removeGalleryImage = (idx: number) => {
-    setProjectGalleryFiles(prev => prev.filter((_, i) => i !== idx));
     setProjectGalleryPreviews(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -361,21 +368,43 @@ export default function ProfileDetailPage() {
     try {
       console.log('💾 Compressing and saving project...');
 
-      // Compress รูปทั้งหมด
-      let compressedImages: string[] = [];
-      if (projectGalleryFiles.length > 0) {
-        console.log('🖼️ Compressing', projectGalleryFiles.length, 'images...');
-        
-        for (let i = 0; i < projectGalleryFiles.length; i++) {
-          const file = projectGalleryFiles[i];
-          console.log(`Compressing image ${i + 1}/${projectGalleryFiles.length}...`);
-          
-          // Compress image ด้วย quality 0.7 และ maxWidth 800px
-          const compressed = await compressImage(file, 800, 0.7);
-          compressedImages.push(compressed);
+      const compressedImages = projectGalleryPreviews.slice(0, 4);
+
+      if (editProjectIdx !== null && projects[editProjectIdx]) {
+        const selected = projects[editProjectIdx];
+        // ใช้รูปจาก modal ปัจจุบันทั้งหมด เพื่อให้การลบรูป/จัดการรูปอัปเดตจริง
+        const resolvedImages = compressedImages;
+        try {
+          await userAPI.updateProject(selected.id, {
+            title: editProjectData.title,
+            desc: editProjectData.desc,
+            images: resolvedImages,
+          });
+          const refreshed = await userAPI.getMyProjects();
+          const mapped = Array.isArray(refreshed) ? refreshed.map((p: { id: string; title: string; desc: string; img?: string; images?: string[] }) => ({
+            id: p.id,
+            title: p.title,
+            desc: p.desc,
+            img: p.img ?? '',
+            images: Array.isArray(p.images) ? p.images : [],
+          })) : [];
+          saveProjectsToStorage(userId, mapped);
+          setProjects(mapped);
+        } catch (apiError) {
+          if (apiError instanceof Error) {
+            toast.error(apiError.message);
+          } else {
+            toast.error('Failed to update project');
+          }
+          return;
         }
-        
-        console.log('✅ All images compressed successfully');
+        setShowEditProjectModal(false);
+        setEditProjectIdx(null);
+        setSuccessMessage('Project updated! ✏️ (ยังไม่แสดงใน Dashboard)');
+        setShowSuccessPopup(true);
+        setTimeout(() => setShowSuccessPopup(false), 4000);
+        toast.success('Project updated! Click "Publish to Dashboard" to share.');
+        return;
       }
 
       const newProject: Project = {
@@ -405,9 +434,11 @@ export default function ProfileDetailPage() {
       saveProjectsToStorage(userId, updated);
       setProjects(updated);
       setShowEditProjectModal(false);
-      setSuccessMessage('Project added successfully! 🚀');
+      setEditProjectIdx(null);
+      setSuccessMessage('Project added! 🚀 (ยังไม่แสดงใน Dashboard)');
       setShowSuccessPopup(true);
-      setTimeout(() => setShowSuccessPopup(false), 3000);
+      setTimeout(() => setShowSuccessPopup(false), 4000);
+      toast.success('Project added! Click "Publish to Dashboard" to share.');
     } catch (error) {
       console.error('❌ Error:', error);
       toast.error('Failed to save project');
@@ -427,7 +458,9 @@ export default function ProfileDetailPage() {
     if (!projectToDelete) return;
     try {
       await userAPI.deleteProject(projectToDelete.id);
-      setProjects(prev => prev.filter((_, i) => i !== deleteProjectIdx));
+      const updated = projects.filter((_, i) => i !== deleteProjectIdx);
+      saveProjectsToStorage(userId, updated);
+      setProjects(updated);
       setShowDeleteProjectModal(false);
       setDeleteProjectIdx(null);
       setSuccessMessage('Project deleted successfully! 🗑️');
@@ -445,10 +478,10 @@ export default function ProfileDetailPage() {
     }
     try {
       await userAPI.setDashboardVisibility(true);
-      setSuccessMessage('Published to Dashboard successfully! ✅');
+      setSuccessMessage('Published to Dashboard! ✅ คนอื่นเห็นโปรไฟล์คุณแล้ว');
       setShowSuccessPopup(true);
-      setTimeout(() => setShowSuccessPopup(false), 3000);
-      toast.success('Published to Dashboard successfully!');
+      setTimeout(() => setShowSuccessPopup(false), 4000);
+      toast.success('Published to Dashboard! Your profile is now visible to everyone.');
     } catch (error) {
       console.error('Update to dashboard error:', error);
       if (error instanceof Error) {
@@ -595,10 +628,10 @@ export default function ProfileDetailPage() {
 
       await fetchProfileData({ skillsOverride: savedSkills });
       setShowEditModal(false);
-      setSuccessMessage('Profile saved successfully! 🎉');
+      setSuccessMessage('Profile saved! 💾 (ยังไม่แสดงใน Dashboard)');
       setShowSuccessPopup(true);
-      setTimeout(() => setShowSuccessPopup(false), 3000);
-      toast.success('Profile saved successfully!');
+      setTimeout(() => setShowSuccessPopup(false), 4000);
+      toast.success('Profile saved! Click "Publish to Dashboard" to share with others.');
     } catch (error) {
       console.error('Update profile error:', error);
       if (error instanceof Error) {
@@ -794,9 +827,19 @@ export default function ProfileDetailPage() {
             </div>
           </motion.div>
 
-          {/* Update + Delete Account Buttons */}
+          {/* Publish to Dashboard + Delete Account Buttons */}
           {isOwnProfile && (
             <div className="space-y-3">
+              {/* คำอธิบาย */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="bg-gradient-to-r from-blue-50/80 to-purple-50/80 backdrop-blur-xl border border-blue-100/50 rounded-2xl p-4 text-center">
+                <p className="text-xs font-bold text-gray-600 leading-relaxed">
+                  💡 <span className="text-[#1d7cf2]">สำคัญ:</span> การแก้ไข Profile/Project จะแสดงแค่ในหน้านี้เท่านั้น<br/>
+                  <span className="text-purple-600">กดปุ่มด้านล่างเพื่อเผยแพร่ไปยัง Dashboard ให้คนอื่นเห็น</span>
+                </p>
+              </motion.div>
+
               <motion.button
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
                 whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
@@ -804,10 +847,8 @@ export default function ProfileDetailPage() {
                 className="relative w-full py-4 bg-gradient-to-r from-[#1d7cf2] to-purple-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-300/40 overflow-hidden flex items-center justify-center gap-2">
                 <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
                   animate={{ x: ['-200%', '200%'] }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} />
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 relative z-10">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                </svg>
-                <span className="relative z-10 uppercase tracking-widest">Update to Dashboard</span>
+                <Presentation className="w-5 h-5 relative z-10" />
+                <span className="relative z-10 uppercase tracking-widest">Publish to Dashboard</span>
               </motion.button>
 
               <motion.button
@@ -862,7 +903,7 @@ export default function ProfileDetailPage() {
               </div>
               {isOwnProfile && (
                 <motion.button
-                  onClick={openEditProjectModal}
+                  onClick={() => openEditProjectModal()}
                   whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
                   className="relative px-6 py-2.5 bg-gradient-to-r from-[#1d7cf2] to-purple-500 text-white rounded-full font-bold text-sm shadow-xl shadow-blue-300/40 overflow-hidden group flex items-center gap-2">
                   <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
@@ -890,12 +931,20 @@ export default function ProfileDetailPage() {
                       className="absolute -inset-2 bg-gradient-to-r from-[#1d7cf2] via-purple-500 to-pink-500 rounded-3xl blur-2xl -z-10" />
                     
                     {isOwnProfile && (
-                      <motion.button
-                        onClick={() => openDeleteProjectModal(idx)}
-                        whileHover={{ scale: 1.1, rotate: 10 }} whileTap={{ scale: 0.9 }}
-                        className="absolute top-4 right-4 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white shadow-xl z-20 hover:bg-red-600">
-                        <Trash2 className="w-5 h-5" />
-                      </motion.button>
+                      <>
+                        <motion.button
+                          onClick={() => openEditProjectModal(idx)}
+                          whileHover={{ scale: 1.1, rotate: -10 }} whileTap={{ scale: 0.9 }}
+                          className="absolute top-4 right-16 w-10 h-10 bg-gradient-to-r from-[#1d7cf2] to-purple-500 rounded-full flex items-center justify-center text-white shadow-xl z-20">
+                          <Edit className="w-5 h-5" />
+                        </motion.button>
+                        <motion.button
+                          onClick={() => openDeleteProjectModal(idx)}
+                          whileHover={{ scale: 1.1, rotate: 10 }} whileTap={{ scale: 0.9 }}
+                          className="absolute top-4 right-4 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white shadow-xl z-20 hover:bg-red-600">
+                          <Trash2 className="w-5 h-5" />
+                        </motion.button>
+                      </>
                     )}
 
                     <div className="md:w-72 h-56 md:h-auto flex-shrink-0 relative overflow-hidden bg-gray-100">
@@ -964,7 +1013,7 @@ export default function ProfileDetailPage() {
         {showEditProjectModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[100]"
-            onClick={() => setShowEditProjectModal(false)}>
+            onClick={() => { setShowEditProjectModal(false); setEditProjectIdx(null); }}>
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
@@ -972,7 +1021,7 @@ export default function ProfileDetailPage() {
               onClick={e => e.stopPropagation()}
               className="relative bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-[760px] overflow-hidden border border-white/60">
 
-              <motion.button onClick={() => setShowEditProjectModal(false)}
+              <motion.button onClick={() => { setShowEditProjectModal(false); setEditProjectIdx(null); }}
                 whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }}
                 className="absolute top-4 right-4 w-10 h-10 bg-gray-100 hover:bg-red-500 hover:text-white rounded-full flex items-center justify-center text-gray-500 shadow-lg z-20 transition-all">
                 <X className="w-5 h-5" />
@@ -983,7 +1032,7 @@ export default function ProfileDetailPage() {
                 <div className="flex-1 flex flex-col gap-4">
                   <motion.div
                     onClick={() => {
-                      if (projectGalleryFiles.length >= 4) {
+                      if (projectGalleryPreviews.length >= 4) {
                         alert('สามารถอัปโหลดได้สูงสุด 4 รูปเท่านั้น! 🚫');
                         return;
                       }
@@ -1058,7 +1107,7 @@ export default function ProfileDetailPage() {
                   <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
                     animate={{ x: ['-200%', '200%'] }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} />
                   <span className="relative z-10">
-                    {uploadingProject ? 'Saving...' : 'Save'}
+                    {uploadingProject ? 'Saving...' : (editProjectIdx !== null ? 'Save' : 'Save')}
                   </span>
                 </motion.button>
               </div>

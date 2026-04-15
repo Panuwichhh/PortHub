@@ -54,6 +54,138 @@ func main() {
 		fmt.Println("✅ Migration: show_on_dashboard column OK")
 	}
 
+	// อัปเดตค่า NULL เป็น false สำหรับ user เก่าๆ
+	_, err = db.Exec("UPDATE users SET show_on_dashboard = false WHERE show_on_dashboard IS NULL")
+	if err != nil {
+		log.Printf("⚠️ Migration update NULL values: %v", err)
+	} else {
+		fmt.Println("✅ Migration: Updated NULL values to false")
+	}
+
+	// สร้างตาราง published_profiles และ published_projects (ไม่ใช้ foreign key ก่อน)
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS published_profiles (
+			user_id INTEGER PRIMARY KEY,
+			user_name VARCHAR(255),
+			email VARCHAR(255),
+			phone VARCHAR(50),
+			university VARCHAR(255),
+			faculty VARCHAR(255),
+			major VARCHAR(255),
+			gpa DECIMAL(3,2),
+			job_interest TEXT,
+			profile_image_url TEXT,
+			skills TEXT,
+			published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		log.Printf("⚠️ Migration published_profiles: %v", err)
+	} else {
+		fmt.Println("✅ Migration: published_profiles table OK")
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS published_projects (
+			published_project_id SERIAL PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			project_id INTEGER NOT NULL,
+			project_name VARCHAR(255),
+			description TEXT,
+			image_url TEXT,
+			published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(user_id, project_id)
+		)
+	`)
+	if err != nil {
+		log.Printf("⚠️ Migration published_projects: %v", err)
+	} else {
+		fmt.Println("✅ Migration: published_projects table OK")
+	}
+
+	_, err = db.Exec("CREATE INDEX IF NOT EXISTS idx_published_projects_user_id ON published_projects(user_id)")
+	if err != nil {
+		log.Printf("⚠️ Migration index: %v", err)
+	} else {
+		fmt.Println("✅ Migration: Index created")
+	}
+
+	// คัดลอกข้อมูล users ที่มี show_on_dashboard = true ไปยัง published_profiles
+	_, err = db.Exec(`
+		INSERT INTO published_profiles (
+			user_id, user_name, email, phone, university, faculty, major, gpa, 
+			job_interest, profile_image_url, skills, published_at, updated_at
+		)
+		SELECT 
+			u.user_id,
+			u.user_name,
+			u.email,
+			u.phone,
+			u.university,
+			u.faculty,
+			u.major,
+			u.gpa,
+			u.job_interest,
+			u.profile_image_url,
+			COALESCE(
+				(
+					SELECT json_agg(s.skill_name)::text
+					FROM user_skills us
+					JOIN skills s ON us.skill_id = s.skill_id
+					WHERE us.user_id = u.user_id
+				),
+				'[]'
+			) as skills,
+			NOW(),
+			NOW()
+		FROM users u
+		WHERE u.show_on_dashboard = true
+		ON CONFLICT (user_id) DO UPDATE SET
+			user_name = EXCLUDED.user_name,
+			email = EXCLUDED.email,
+			phone = EXCLUDED.phone,
+			university = EXCLUDED.university,
+			faculty = EXCLUDED.faculty,
+			major = EXCLUDED.major,
+			gpa = EXCLUDED.gpa,
+			job_interest = EXCLUDED.job_interest,
+			profile_image_url = EXCLUDED.profile_image_url,
+			skills = EXCLUDED.skills,
+			updated_at = NOW()
+	`)
+	if err != nil {
+		log.Printf("⚠️ Migration copy users: %v", err)
+	} else {
+		fmt.Println("✅ Migration: Copied existing users to published_profiles")
+	}
+
+	// คัดลอก projects ของ users ที่ publish แล้ว
+	_, err = db.Exec(`
+		INSERT INTO published_projects (
+			user_id, project_id, project_name, description, image_url, published_at
+		)
+		SELECT 
+			p.user_id,
+			p.project_id,
+			p.project_name,
+			p.description,
+			p.image_url,
+			NOW()
+		FROM projects p
+		WHERE p.user_id IN (SELECT user_id FROM users WHERE show_on_dashboard = true)
+		ON CONFLICT (user_id, project_id) DO UPDATE SET
+			project_name = EXCLUDED.project_name,
+			description = EXCLUDED.description,
+			image_url = EXCLUDED.image_url,
+			published_at = NOW()
+	`)
+	if err != nil {
+		log.Printf("⚠️ Migration copy projects: %v", err)
+	} else {
+		fmt.Println("✅ Migration: Copied existing projects to published_projects")
+	}
+
 	// 2. สร้าง Server
 	r := gin.Default()
 

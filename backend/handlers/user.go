@@ -316,7 +316,7 @@ func DeleteMe(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// SetDashboardVisibility sets show_on_dashboard for the current user (publish/unpublish to dashboard).
+// SetDashboardVisibility publishes current profile and projects to dashboard (creates snapshot).
 func SetDashboardVisibility(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userIDValue, exists := c.Get("user_id")
@@ -336,15 +336,120 @@ func SetDashboardVisibility(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 			return
 		}
-		_, err := db.Exec(
-			"UPDATE users SET show_on_dashboard = $1 WHERE user_id = $2",
-			input.ShowOnDashboard,
-			userID,
-		)
+
+		tx, err := db.Begin()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 			return
 		}
+		defer func() { _ = tx.Rollback() }()
+
+		if input.ShowOnDashboard {
+			// Publish: สร้าง snapshot ของ profile และ projects
+			
+			// 1. ดึงข้อมูล profile ปัจจุบัน
+			var userName, email, phone, university, faculty, major, jobInterest, profileImageURL sql.NullString
+			var gpaStr sql.NullString
+			err := tx.QueryRow(`
+				SELECT user_name, email, phone, university, faculty, major, gpa, job_interest, profile_image_url
+				FROM users WHERE user_id = $1
+			`, userID).Scan(&userName, &email, &phone, &university, &faculty, &major, &gpaStr, &jobInterest, &profileImageURL)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch profile"})
+				return
+			}
+
+			// 2. ดึง skills
+			skillRows, err := tx.Query(`
+				SELECT s.skill_name FROM user_skills us
+				JOIN skills s ON us.skill_id = s.skill_id
+				WHERE us.user_id = $1
+			`, userID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch skills"})
+				return
+			}
+			var skills []string
+			for skillRows.Next() {
+				var skill string
+				if skillRows.Scan(&skill) == nil {
+					skills = append(skills, skill)
+				}
+			}
+			skillRows.Close()
+			skillsJSON, _ := json.Marshal(skills)
+
+			// 3. บันทึก published_profile
+			_, err = tx.Exec(`
+				INSERT INTO published_profiles 
+				(user_id, user_name, email, phone, university, faculty, major, gpa, job_interest, profile_image_url, skills, updated_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+				ON CONFLICT (user_id) DO UPDATE SET
+					user_name = EXCLUDED.user_name,
+					email = EXCLUDED.email,
+					phone = EXCLUDED.phone,
+					university = EXCLUDED.university,
+					faculty = EXCLUDED.faculty,
+					major = EXCLUDED.major,
+					gpa = EXCLUDED.gpa,
+					job_interest = EXCLUDED.job_interest,
+					profile_image_url = EXCLUDED.profile_image_url,
+					skills = EXCLUDED.skills,
+					updated_at = NOW()
+			`, userID, userName.String, email.String, phone.String, university.String, faculty.String, major.String, gpaStr.String, jobInterest.String, profileImageURL.String, string(skillsJSON))
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish profile"})
+				return
+			}
+
+			// 4. ลบ published_projects เก่า
+			_, err = tx.Exec("DELETE FROM published_projects WHERE user_id = $1", userID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear old projects"})
+				return
+			}
+
+			// 5. คัดลอก projects ปัจจุบันไป published_projects
+			_, err = tx.Exec(`
+				INSERT INTO published_projects (user_id, project_id, project_name, description, image_url)
+				SELECT user_id, project_id, project_name, description, image_url
+				FROM projects WHERE user_id = $1
+			`, userID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish projects"})
+				return
+			}
+
+			// 6. ตั้งค่า show_on_dashboard = true
+			_, err = tx.Exec("UPDATE users SET show_on_dashboard = true WHERE user_id = $1", userID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update visibility"})
+				return
+			}
+		} else {
+			// Unpublish: ลบ snapshot และตั้งค่า show_on_dashboard = false
+			_, err = tx.Exec("DELETE FROM published_profiles WHERE user_id = $1", userID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unpublish profile"})
+				return
+			}
+			_, err = tx.Exec("DELETE FROM published_projects WHERE user_id = $1", userID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unpublish projects"})
+				return
+			}
+			_, err = tx.Exec("UPDATE users SET show_on_dashboard = false WHERE user_id = $1", userID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update visibility"})
+				return
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit"})
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Dashboard visibility updated",
 			"show_on_dashboard": input.ShowOnDashboard,
@@ -352,7 +457,7 @@ func SetDashboardVisibility(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// GetDashboardProfiles returns users who have show_on_dashboard = true, excluding the current user.
+// GetDashboardProfiles returns users who have published to dashboard (from published_profiles), excluding the current user.
 func GetDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userIDValue, exists := c.Get("user_id")
@@ -367,8 +472,8 @@ func GetDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 		}
 		rows, err := db.Query(`
 			SELECT user_id, user_name, profile_image_url, job_interest, university, faculty, major, gpa
-			FROM users
-			WHERE show_on_dashboard = true AND user_id != $1
+			FROM published_profiles
+			WHERE user_id != $1
 			ORDER BY user_id
 		`, currentID)
 		if err != nil {
@@ -406,13 +511,12 @@ func GetDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// GetPublicDashboardProfiles returns all users who have show_on_dashboard = true. No auth required (for guests).
+// GetPublicDashboardProfiles returns all published profiles. No auth required (for guests).
 func GetPublicDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rows, err := db.Query(`
 			SELECT user_id, user_name, profile_image_url, job_interest, university, faculty, major, gpa
-			FROM users
-			WHERE show_on_dashboard = true
+			FROM published_profiles
 			ORDER BY user_id
 		`)
 		if err != nil {
@@ -450,7 +554,7 @@ func GetPublicDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// GetPublicProfile returns a user's public profile (only if show_on_dashboard = true). No auth required.
+// GetPublicProfile returns a user's published profile (from published_profiles). No auth required.
 func GetPublicProfile(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idStr := c.Param("id")
@@ -459,6 +563,8 @@ func GetPublicProfile(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user id"})
 			return
 		}
+		
+		// ดึงข้อมูลจาก published_profiles
 		var (
 			userName        sql.NullString
 			email           sql.NullString
@@ -469,53 +575,41 @@ func GetPublicProfile(db *sql.DB) gin.HandlerFunc {
 			gpaStr          sql.NullString
 			jobInterest     sql.NullString
 			profileImageURL sql.NullString
-			showOnDashboard bool
+			skillsJSON      sql.NullString
 		)
 		row := db.QueryRow(`
-			SELECT user_name, email, phone, university, faculty, major, gpa, job_interest, profile_image_url, COALESCE(show_on_dashboard, false)
-			FROM users
+			SELECT user_name, email, phone, university, faculty, major, gpa, job_interest, profile_image_url, skills
+			FROM published_profiles
 			WHERE user_id = $1
 		`, targetID)
-		if err := row.Scan(&userName, &email, &phone, &university, &faculty, &major, &gpaStr, &jobInterest, &profileImageURL, &showOnDashboard); err != nil {
+		if err := row.Scan(&userName, &email, &phone, &university, &faculty, &major, &gpaStr, &jobInterest, &profileImageURL, &skillsJSON); err != nil {
 			if err == sql.ErrNoRows {
-				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Profile not published"})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		if !showOnDashboard {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Profile is not public"})
-			return
-		}
+		
 		var gpa float64
 		if gpaStr.Valid {
 			fmt.Sscanf(gpaStr.String, "%f", &gpa)
 		}
-		// skills
+		
+		// Parse skills
 		var skills []string
-		skillRows, err := db.Query(`
-			SELECT s.skill_name FROM user_skills us
-			JOIN skills s ON us.skill_id = s.skill_id
-			WHERE us.user_id = $1
-		`, targetID)
-		if err == nil {
-			defer skillRows.Close()
-			for skillRows.Next() {
-				var skill string
-				if skillRows.Scan(&skill) == nil {
-					skills = append(skills, skill)
-				}
-			}
+		if skillsJSON.Valid && skillsJSON.String != "" {
+			_ = json.Unmarshal([]byte(skillsJSON.String), &skills)
 		}
 		if skills == nil {
 			skills = []string{}
 		}
-		// projects
+		
+		// ดึง projects จาก published_projects
 		var projects []gin.H
 		projRows, err := db.Query(`
 			SELECT project_id, project_name, description, image_url
-			FROM projects WHERE user_id = $1 ORDER BY created_at DESC
+			FROM published_projects WHERE user_id = $1 ORDER BY published_at DESC
 		`, targetID)
 		if err == nil {
 			defer projRows.Close()
@@ -545,6 +639,7 @@ func GetPublicProfile(db *sql.DB) gin.HandlerFunc {
 		if projects == nil {
 			projects = []gin.H{}
 		}
+		
 		c.JSON(http.StatusOK, gin.H{
 			"user_id":           targetID,
 			"user_name":         userName.String,

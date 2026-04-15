@@ -50,7 +50,9 @@ func UserRoutes(rg *gin.RouterGroup, db *sql.DB) {
 		users.DELETE("/me", handlers.DeleteMe(db))
 		users.GET("/me/skills", handlers.GetMySkills(db))
 		users.GET("/me/projects", handlers.GetMyProjects(db))
+		users.GET("/me/projects/:id", handlers.GetMyProjectByID(db))
 		users.POST("/me/projects", handlers.CreateProject(db))
+		users.PUT("/me/projects/:id", handlers.UpdateProject(db))
 		users.DELETE("/me/projects/:id", handlers.DeleteProject(db))
 		users.PUT("/me/dashboard-visibility", handlers.SetDashboardVisibility(db))
 	}

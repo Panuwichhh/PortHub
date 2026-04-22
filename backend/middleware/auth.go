@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -9,7 +10,13 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtKey = []byte("your_secret_key")
+func getJWTKey() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "porthub_dev_secret_change_in_production_2024"
+	}
+	return []byte(secret)
+}
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -26,7 +33,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		claims := &jwt.RegisteredClaims{}
 
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
+			return getJWTKey(), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -43,7 +50,6 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set("user_id", userID)
-
 		c.Next()
 	}
 }

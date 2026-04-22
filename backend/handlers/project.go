@@ -68,13 +68,8 @@ func GetMyProjects(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-<<<<<<< Updated upstream
 // GetProjectByID returns a single project by id (e.g. "7" or "p7"). Auth required; returns only current user's project.
 func GetProjectByID(db *sql.DB) gin.HandlerFunc {
-=======
-// GetMyProjectByID returns one project for the current user by id.
-func GetMyProjectByID(db *sql.DB) gin.HandlerFunc {
->>>>>>> Stashed changes
 	return func(c *gin.Context) {
 		userIDValue, exists := c.Get("user_id")
 		if !exists {
@@ -107,19 +102,11 @@ func GetMyProjectByID(db *sql.DB) gin.HandlerFunc {
 			FROM projects
 			WHERE project_id = $1 AND user_id = $2
 		`, projectID, userID).Scan(&name, &desc, &imageURL)
-<<<<<<< Updated upstream
 		if err != nil {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 				return
 			}
-=======
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
-			return
-		}
-		if err != nil {
->>>>>>> Stashed changes
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
 			return
 		}
@@ -135,10 +122,6 @@ func GetMyProjectByID(db *sql.DB) gin.HandlerFunc {
 		if len(images) > 0 {
 			img = images[0]
 		}
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 		c.JSON(http.StatusOK, gin.H{
 			"id":     strconv.Itoa(projectID),
 			"title":  name.String,

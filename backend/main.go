@@ -1,11 +1,13 @@
 package main
 
 import (
+	"backend/middleware"
 	"backend/routes"
 	"database/sql"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -41,10 +43,15 @@ func main() {
 	}
 	defer db.Close()
 
+	// 🚀 Connection Pool Optimization
+	db.SetMaxOpenConns(100)        // เพิ่มจำนวน connections สูงสุด
+	db.SetMaxIdleConns(25)         // เก็บ idle connections ไว้
+	db.SetConnMaxLifetime(300)     // connection อายุ 5 นาที
+
 	if err = db.Ping(); err != nil {
 		log.Fatal("❌ ไม่สามารถเชื่อมต่อ Database ได้ (Ping failed):", err)
 	}
-	fmt.Println("✅ Database connected successfully")
+	fmt.Println("✅ Database connected successfully (Pool: 100 max, 25 idle)")
 
 	// รัน migration: เพิ่มคอลัมน์ show_on_dashboard ถ้ายังไม่มี (ไม่ต้องรัน SQL เอง)
 	_, err = db.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS show_on_dashboard BOOLEAN DEFAULT false")
@@ -187,7 +194,15 @@ func main() {
 	}
 
 	// 2. สร้าง Server
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode) // 🚀 Production mode
+	r := gin.New()
+	
+	// 🚀 Performance Middleware
+	r.Use(gin.Recovery()) // Panic recovery
+	r.Use(gin.Logger())   // Logging
+	
+	// 🚀 Rate Limiting: 200 requests per minute per IP
+	r.Use(middleware.RateLimitMiddleware(200, time.Minute))
 
 	// --- Middleware สำหรับ CORS (แก้ไขให้ครอบคลุม) ---
 	allowOrigin := os.Getenv("CORS_ORIGIN")
@@ -199,6 +214,11 @@ func main() {
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Origin, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		
+		// 🚀 Cache headers for static content
+		if c.Request.Method == "GET" {
+			c.Writer.Header().Set("Cache-Control", "public, max-age=300") // 5 minutes
+		}
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)

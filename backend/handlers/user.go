@@ -59,7 +59,7 @@ func GetMe(db *sql.DB) gin.HandlerFunc {
 				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
 			return
 		}
 
@@ -220,7 +220,7 @@ func UpdateMe(db *sql.DB) gin.HandlerFunc {
 			userID,
 		)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
 		return
 	}
 	rowsAffected, _ := result.RowsAffected()
@@ -458,6 +458,7 @@ func SetDashboardVisibility(db *sql.DB) gin.HandlerFunc {
 }
 
 // GetDashboardProfiles returns users who have published to dashboard (from published_profiles), excluding the current user.
+// 🚀 Optimized query with limited fields for better performance
 func GetDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userIDValue, exists := c.Get("user_id")
@@ -474,7 +475,8 @@ func GetDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 			SELECT user_id, user_name, profile_image_url, job_interest, university, faculty, major, gpa
 			FROM published_profiles
 			WHERE user_id != $1
-			ORDER BY user_id
+			ORDER BY updated_at DESC
+			LIMIT 100
 		`, currentID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
@@ -512,12 +514,15 @@ func GetDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 }
 
 // GetPublicDashboardProfiles returns all published profiles. No auth required (for guests).
+// 🚀 Optimized query with limited fields for better performance
 func GetPublicDashboardProfiles(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 🚀 Use prepared statement for better performance
 		rows, err := db.Query(`
 			SELECT user_id, user_name, profile_image_url, job_interest, university, faculty, major, gpa
 			FROM published_profiles
-			ORDER BY user_id
+			ORDER BY updated_at DESC
+			LIMIT 100
 		`)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})

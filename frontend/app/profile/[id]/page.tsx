@@ -1080,20 +1080,24 @@ export default function ProfileDetailPage() {
                     <input
                       type="text"
                       value={editProjectData.title}
-                      onChange={e => setEditProjectData(prev => ({ ...prev, title: e.target.value }))}
+                      onChange={e => setEditProjectData(prev => ({ ...prev, title: e.target.value.slice(0, 100) }))}
                       placeholder="Enter project name..."
+                      maxLength={100}
                       className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:outline-none focus:border-[#1d7cf2] focus:ring-4 focus:ring-[#1d7cf2]/10 transition-all text-black bg-white shadow-sm font-semibold placeholder:text-gray-300"
                     />
+                    <p className="text-xs text-gray-400 mt-1 text-right">{editProjectData.title.length}/100</p>
                   </div>
                   <div className="flex-1 flex flex-col">
                     <label className="block text-[#1d7cf2] font-black text-sm mb-2 uppercase tracking-wide">Detail</label>
                     <textarea
                       value={editProjectData.desc}
-                      onChange={e => setEditProjectData(prev => ({ ...prev, desc: e.target.value }))}
+                      onChange={e => setEditProjectData(prev => ({ ...prev, desc: e.target.value.slice(0, 2000) }))}
                       placeholder="Describe your project..."
                       rows={6}
+                      maxLength={2000}
                       className="flex-1 w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:outline-none focus:border-[#1d7cf2] focus:ring-4 focus:ring-[#1d7cf2]/10 transition-all text-black bg-white shadow-sm font-semibold placeholder:text-gray-300 resize-none"
                     />
+                    <p className="text-xs text-gray-400 mt-1 text-right">{editProjectData.desc.length}/2000</p>
                   </div>
                 </div>
               </div>

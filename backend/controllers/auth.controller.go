@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"strings"
 	"time"
 
@@ -21,7 +20,7 @@ type User struct {
 }
 
 // ---------------------------------------------------------
-// 1. Register: สมัครสมาชิก
+// 1. Register
 // ---------------------------------------------------------
 func Register(c *gin.Context, db *sql.DB) {
 
@@ -39,26 +38,26 @@ func Register(c *gin.Context, db *sql.DB) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
+		utils.BadRequest(c, "ข้อมูลไม่ถูกต้อง")
 		return
 	}
 
 	emailNorm := strings.ToLower(strings.TrimSpace(input.Email))
 
 	if emailNorm == "" || input.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "กรุณากรอก email และ password"})
+		utils.BadRequest(c, "กรุณากรอก email และ password")
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "hash password ไม่สำเร็จ"})
+		utils.Internal(c, "hash password ไม่สำเร็จ")
 		return
 	}
 
 	tx, err := db.Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+		utils.Internal(c, "DB error")
 		return
 	}
 
@@ -86,10 +85,9 @@ func Register(c *gin.Context, db *sql.DB) {
 	if err != nil {
 		tx.Rollback()
 		fmt.Println("❌ Insert user error:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "อีเมลนี้ถูกใช้งานแล้ว"})
+		utils.Error(c, 500, "สมัครสมาชิกไม่สำเร็จ (email อาจซ้ำ)", err.Error())
 		return
 	}
-	fmt.Println("Skills from frontend:", input.Skills)
 
 	// Insert skills
 	for _, skillName := range input.Skills {
@@ -101,14 +99,12 @@ func Register(c *gin.Context, db *sql.DB) {
 
 		var skillID int
 
-		// เช็คว่ามี skill นี้แล้วหรือยัง
 		err := tx.QueryRow(
 			"SELECT skill_id FROM skills WHERE LOWER(skill_name)=LOWER($1)",
 			skillName,
 		).Scan(&skillID)
 
 		if err == sql.ErrNoRows {
-			// ยังไม่มี → สร้างใหม่
 			err = tx.QueryRow(
 				"INSERT INTO skills (skill_name) VALUES ($1) RETURNING skill_id",
 				skillName,
@@ -116,16 +112,15 @@ func Register(c *gin.Context, db *sql.DB) {
 
 			if err != nil {
 				tx.Rollback()
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Insert skill error"})
+				utils.Internal(c, "Insert skill error")
 				return
 			}
 		} else if err != nil {
 			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Skill lookup error"})
+			utils.Internal(c, "Skill lookup error")
 			return
 		}
 
-		// ผูก skill กับ user
 		_, err = tx.Exec(
 			"INSERT INTO user_skills (user_id, skill_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
 			userID,
@@ -134,194 +129,185 @@ func Register(c *gin.Context, db *sql.DB) {
 
 		if err != nil {
 			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Insert user skill error"})
+			utils.Internal(c, "Insert user skill error")
 			return
 		}
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Commit error"})
+	if err := tx.Commit(); err != nil {
+		utils.Internal(c, "Commit error")
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "สมัครสมาชิกสำเร็จ!",
+	utils.Success(c, 201, "สมัครสมาชิกสำเร็จ!", gin.H{
 		"user_id": userID,
 	})
 }
 
 // ---------------------------------------------------------
-// 2. Login: เข้าสู่ระบบ
+// 2. Login
 // ---------------------------------------------------------
 func Login(c *gin.Context, db *sql.DB) {
 
 	var input User
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
+		utils.BadRequest(c, "ข้อมูลไม่ถูกต้อง")
 		return
 	}
 
 	emailNorm := strings.ToLower(strings.TrimSpace(input.Email))
-	fmt.Println("LOGIN EMAIL INPUT:", emailNorm)
 
 	var storedPassword string
 	var userID int
 
-	query := "SELECT user_id, password_hash FROM users WHERE LOWER(email) = $1"
-	err := db.QueryRow(query, emailNorm).Scan(&userID, &storedPassword)
+	err := db.QueryRow(
+		"SELECT user_id, password_hash FROM users WHERE LOWER(email)=$1",
+		emailNorm,
+	).Scan(&userID, &storedPassword)
+
 	if err != nil {
-		fmt.Println("LOGIN QUERY ERROR:", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่พบอีเมลนี้ในระบบ"})
+		utils.Unauthorized(c, "ไม่พบอีเมลนี้ในระบบ")
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(input.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "รหัสผ่านไม่ถูกต้อง"})
+		utils.Unauthorized(c, "รหัสผ่านไม่ถูกต้อง")
 		return
 	}
 
-	// สร้าง JWT โดยใช้ user_id
 	token, err := utils.GenerateToken(fmt.Sprintf("%d", userID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง token ได้"})
+		utils.Internal(c, "สร้าง token ไม่สำเร็จ")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "เข้าสู่ระบบสำเร็จ!",
-		"token":   token,
+	// 🔥 รองรับทั้ง format ใหม่ + เก่า
+	utils.Success(c, 200, "เข้าสู่ระบบสำเร็จ!", gin.H{
+		"token": token,
 	})
 }
 
 // ---------------------------------------------------------
-// 3. ForgotPassword: สร้าง OTP และส่งเมล
+// 3. Forgot Password
 // ---------------------------------------------------------
 func ForgotPassword(c *gin.Context, db *sql.DB) {
+
 	var input struct {
 		Email string `json:"email"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "กรุณาระบุอีเมล"})
+		utils.BadRequest(c, "กรุณาระบุอีเมล")
 		return
 	}
 
-	fmt.Println("📩 Request Forgot Password for:", input.Email)
-
-	// 1. เช็คว่ามี User ไหม และเอา user_id + email จริงจาก DB (เปรียบเทียบอีเมลไม่สนใจตัวพิมพ์ใหญ่/เล็ก)
 	emailNorm := strings.ToLower(strings.TrimSpace(input.Email))
+
 	var userID int
 	var dbEmail string
-	err := db.QueryRow("SELECT user_id, email FROM users WHERE LOWER(email) = $1", emailNorm).Scan(&userID, &dbEmail)
+
+	err := db.QueryRow(
+		"SELECT user_id, email FROM users WHERE LOWER(email)=$1",
+		emailNorm,
+	).Scan(&userID, &dbEmail)
+
 	if err != nil {
-		fmt.Println("❌ User not found:", input.Email)
-		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบอีเมลนี้ในระบบ"})
+		utils.Unauthorized(c, "ไม่พบอีเมลนี้ในระบบ")
 		return
 	}
 
-	// 2. สุ่มเลข 4 หลัก
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
-	otp := fmt.Sprintf("%04d", r.Intn(10000))
+	otp := fmt.Sprintf("%04d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(10000))
 	expiresAt := time.Now().Add(5 * time.Minute)
 
-	// 3. บันทึกลงตาราง verification_codes
-	// ล้างรหัสเก่าที่ยังไม่ได้ใช้ของ user คนนี้ออกก่อน
-	db.Exec("DELETE FROM verification_codes WHERE user_id = $1", userID)
+	db.Exec("DELETE FROM verification_codes WHERE user_id=$1", userID)
 
-	query := "INSERT INTO verification_codes (user_id, code, expired_at) VALUES ($1, $2, $3)"
-	_, err = db.Exec(query, userID, otp, expiresAt)
+	_, err = db.Exec(
+		"INSERT INTO verification_codes (user_id, code, expired_at) VALUES ($1,$2,$3)",
+		userID, otp, expiresAt,
+	)
+
 	if err != nil {
-		fmt.Println("❌ DB Insert Error:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		utils.Internal(c, "Database error")
 		return
 	}
 
-	// 4. ส่งเมล (ใช้ email จาก DB เพื่อส่งไปที่ถูกต้อง)
-	err = utils.SendOTPEmail(dbEmail, otp)
-	
-	// แสดง OTP ใน Terminal เสมอเพื่อ debug
-	fmt.Printf("\n🔑 [DEBUG] OTP Code: %s (Email: %s)\n\n", otp, dbEmail)
-	
-	if err != nil {
-		fmt.Println("⚠️ Email Send Error (OTP still saved):", err)
-		// คืน 200 เพื่อให้ frontend เด้งไปหน้า verify-email ได้ (ใช้รหัสจาก Terminal เทส)
-		c.JSON(http.StatusOK, gin.H{"message": "ส่งรหัส OTP เรียบร้อยแล้ว (รหัสแสดงใน Terminal เพราะส่งเมลยังไม่สำเร็จ)"})
-		return
-	}
+	utils.SendOTPEmail(dbEmail, otp)
 
-	fmt.Println("✅ OTP sent successfully to", dbEmail)
-	c.JSON(http.StatusOK, gin.H{"message": "ส่งรหัส OTP เรียบร้อยแล้ว"})
+	utils.Success(c, 200, "ส่ง OTP แล้ว", nil)
 }
 
 // ---------------------------------------------------------
-// 4. VerifyOTP: เช็ครหัส
+// 4. Verify OTP
 // ---------------------------------------------------------
 func VerifyOTP(c *gin.Context, db *sql.DB) {
+
 	var input struct {
 		Email string `json:"email"`
 		OTP   string `json:"otp"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
+		utils.BadRequest(c, "ข้อมูลไม่ถูกต้อง")
 		return
 	}
 
 	emailNorm := strings.ToLower(strings.TrimSpace(input.Email))
+
 	var storedOTP string
 	var expiresAt time.Time
 
 	query := `
-		SELECT vc.code, vc.expired_at 
-		FROM verification_codes vc
-		JOIN users u ON vc.user_id = u.user_id
-		WHERE LOWER(u.email) = $1 AND vc.is_used = FALSE
-		ORDER BY vc.created_at DESC LIMIT 1`
+	SELECT vc.code, vc.expired_at
+	FROM verification_codes vc
+	JOIN users u ON vc.user_id=u.user_id
+	WHERE LOWER(u.email)=$1 AND vc.is_used=FALSE
+	ORDER BY vc.created_at DESC LIMIT 1`
 
 	err := db.QueryRow(query, emailNorm).Scan(&storedOTP, &expiresAt)
+
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว"})
+		utils.Unauthorized(c, "OTP ไม่ถูกต้องหรือหมดอายุ")
 		return
 	}
 
-	if storedOTP != input.OTP {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "รหัส OTP ไม่ถูกต้อง"})
+	if storedOTP != input.OTP || time.Now().After(expiresAt) {
+		utils.Unauthorized(c, "OTP ไม่ถูกต้องหรือหมดอายุ")
 		return
 	}
 
-	if time.Now().After(expiresAt) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "รหัส OTP หมดอายุแล้ว"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "รหัสถูกต้อง"})
+	utils.Success(c, 200, "OTP ถูกต้อง", nil)
 }
 
 // ---------------------------------------------------------
-// 5. ResetPassword: เปลี่ยนรหัสใหม่
+// 5. Reset Password
 // ---------------------------------------------------------
 func ResetPassword(c *gin.Context, db *sql.DB) {
+
 	var input struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
+		utils.BadRequest(c, "ข้อมูลไม่ถูกต้อง")
 		return
 	}
 
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	emailNorm := strings.ToLower(strings.TrimSpace(input.Email))
 
-	// อัปเดตรหัสผ่าน (ค้นหาผู้ใช้แบบไม่สนใจตัวพิมพ์ใหญ่/เล็ก)
-	_, err := db.Exec("UPDATE users SET password_hash = $1 WHERE LOWER(email) = $2", string(hashedPassword), emailNorm)
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+
+	_, err := db.Exec(
+		"UPDATE users SET password_hash=$1 WHERE LOWER(email)=$2",
+		string(hashedPassword), emailNorm,
+	)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "เปลี่ยนรหัสผ่านไม่สำเร็จ"})
+		utils.Internal(c, "เปลี่ยนรหัสผ่านไม่สำเร็จ")
 		return
 	}
 
-	// ลบ OTP ทิ้งหลังใช้สำเร็จ
-	db.Exec("DELETE FROM verification_codes WHERE user_id = (SELECT user_id FROM users WHERE LOWER(email) = $1)", emailNorm)
+	db.Exec("DELETE FROM verification_codes WHERE user_id=(SELECT user_id FROM users WHERE LOWER(email)=$1)", emailNorm)
 
-	c.JSON(http.StatusOK, gin.H{"message": "เปลี่ยนรหัสผ่านสำเร็จ!"})
+	utils.Success(c, 200, "เปลี่ยนรหัสผ่านสำเร็จ!", nil)
 }

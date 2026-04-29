@@ -17,10 +17,11 @@ interface UserProfile {
 interface UserCardProps {
   user: UserProfile;
   index: number;
+  isDark?: boolean;
 }
 
 // 🚀 Memoized UserCard component - จะ re-render ก็ต่อเมื่อ user หรือ index เปลี่ยน
-const UserCard = memo(({ user, index }: UserCardProps) => {
+const UserCard = memo(({ user, index, isDark = false }: UserCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 40, scale: 0.9 }}
@@ -31,12 +32,17 @@ const UserCard = memo(({ user, index }: UserCardProps) => {
         <motion.div 
           whileHover={{ y: -10 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="relative bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.08)] flex flex-col items-center hover:shadow-[0_30px_80px_rgba(29,124,242,0.2)] transition-all duration-500 border border-white/60 h-full overflow-hidden"
+          className={`relative backdrop-blur-xl p-8 rounded-3xl flex flex-col items-center transition-all duration-500 border h-full overflow-hidden
+            ${isDark
+              ? 'bg-[#21262d]/80 border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_80px_rgba(29,124,242,0.25)]'
+              : 'bg-white/80 border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.08)] hover:shadow-[0_30px_80px_rgba(29,124,242,0.2)]'
+            }`}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-[#1d7cf2]/0 via-purple-500/0 to-pink-500/0 group-hover:from-[#1d7cf2]/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-500 rounded-3xl" />
           
           <motion.div 
-            className="absolute top-6 left-6 text-xs font-black text-gray-200 uppercase tracking-widest group-hover:text-[#1d7cf2]/40 transition-all duration-300"
+            className={`absolute top-6 left-6 text-xs font-black uppercase tracking-widest group-hover:text-[#1d7cf2]/40 transition-all duration-300
+              ${isDark ? 'text-gray-600' : 'text-gray-200'}`}
             whileHover={{ scale: 1.1, x: 5 }}
           >
             ID: {user.user_id.toString().padStart(3, '0')}
@@ -73,7 +79,8 @@ const UserCard = memo(({ user, index }: UserCardProps) => {
           
           <div className="w-full space-y-4 text-center relative z-10">
             <motion.h3 
-              className="text-xl font-black tracking-tight text-gray-900 group-hover:text-[#1d7cf2] transition-colors leading-tight"
+              className={`text-xl font-black tracking-tight group-hover:text-[#1d7cf2] transition-colors leading-tight
+                ${isDark ? 'text-gray-100' : 'text-gray-900'}`}
               whileHover={{ scale: 1.05 }}
             >
               {user.user_name || 'No Name'}
@@ -82,15 +89,20 @@ const UserCard = memo(({ user, index }: UserCardProps) => {
             <div className="flex justify-center">
               <motion.p 
                 whileHover={{ scale: 1.05, y: -2 }}
-                className="inline-block px-4 py-2 rounded-xl bg-gradient-to-r from-blue-50/80 to-purple-50/80 backdrop-blur-xl border border-blue-100/50 text-[#1d7cf2] font-black text-xs uppercase tracking-wide shadow-lg shadow-blue-100/30 line-clamp-2"
+                className={`inline-block px-4 py-2 rounded-xl backdrop-blur-xl border font-black text-xs uppercase tracking-wide shadow-lg line-clamp-2
+                  ${isDark
+                    ? 'bg-blue-900/30 border-blue-700/40 text-blue-300 shadow-blue-900/20'
+                    : 'bg-gradient-to-r from-blue-50/80 to-purple-50/80 border-blue-100/50 text-[#1d7cf2] shadow-blue-100/30'
+                  }`}
               >
                 {user.job_interest || 'No Job Interest'}
               </motion.p>
             </div>
             
-            <div className="pt-6 space-y-3 border-t border-gray-100">
+            <div className={`pt-6 space-y-3 border-t ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
               <motion.div 
-                className="flex items-center justify-center gap-2 text-gray-500 text-xs font-black uppercase tracking-widest"
+                className={`flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest
+                  ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
                 whileHover={{ x: 3 }}
               >
                 <GraduationCap className="w-4 h-4 text-[#1d7cf2]" />
@@ -98,7 +110,8 @@ const UserCard = memo(({ user, index }: UserCardProps) => {
               </motion.div>
               
               <motion.div 
-                className="flex items-center justify-center gap-2 text-gray-500 text-xs font-black uppercase tracking-widest"
+                className={`flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest
+                  ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
                 whileHover={{ x: 3 }}
               >
                 <Briefcase className="w-4 h-4 text-purple-500" />
@@ -108,7 +121,7 @@ const UserCard = memo(({ user, index }: UserCardProps) => {
             
             {user.gpa && (
               <div className="pt-3">
-                <span className="text-xs font-black text-gray-400">
+                <span className={`text-xs font-black ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                   GPA: {user.gpa.toFixed(2)}
                 </span>
               </div>

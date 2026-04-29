@@ -58,6 +58,7 @@ func ProjectRoutes(rg *gin.RouterGroup, db *sql.DB) {
 	projects := rg.Group("/projects")
 	projects.Use(middleware.AuthMiddleware())
 	{
+		projects.GET("", handlers.GetMyProjects(db))
 		projects.GET("/:id", handlers.GetProjectByID(db))
 	}
 }

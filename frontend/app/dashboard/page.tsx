@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  LogOut, User, Search, LogIn, DoorOpen
+  LogOut, User, Search, LogIn, DoorOpen, Sun, Moon
 } from 'lucide-react';
 import { userAPI, tokenManager, logout } from '@/lib/api';
 import toast from 'react-hot-toast';
 import UserCard from './UserCard';
+import { useTheme } from '../providers/ThemeProvider';
 
 interface UserProfile {
   user_id: number;
@@ -24,6 +25,7 @@ interface UserProfile {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { isDark, toggleTheme } = useTheme();
   const [isGuest, setIsGuest] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -114,7 +116,11 @@ export default function DashboardPage() {
   if (!isReady) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f0f7ff] via-white to-[#fef3ff] font-sans text-black overflow-x-hidden relative">
+    <div className={`min-h-screen font-sans overflow-x-hidden relative transition-colors duration-300
+      ${isDark
+        ? 'bg-gradient-to-br from-[#0d1117] via-[#161b22] to-[#0d1117] text-gray-100'
+        : 'bg-gradient-to-br from-[#f0f7ff] via-white to-[#fef3ff] text-black'
+      }`}>
       
       {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -126,12 +132,17 @@ export default function DashboardPage() {
         <motion.div
           animate={{ scale: [1, 1.3, 1], opacity: [0.03, 0.07, 0.03], rotate: [0, -180, -360] }}
           transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-1/3 -right-1/4 w-2/3 h-2/3 bg-gradient-to-tl from-purple-300 to-pink-200 rounded-full blur-[120px]"
+          className={`absolute -bottom-1/3 -right-1/4 w-2/3 h-2/3 rounded-full blur-[120px]
+            ${isDark ? 'bg-gradient-to-tl from-indigo-900 to-purple-900' : 'bg-gradient-to-tl from-purple-300 to-pink-200'}`}
         />
       </div>
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full bg-white/60 backdrop-blur-2xl border-b border-white/40 shadow-lg shadow-blue-100/20">
+      <nav className={`sticky top-0 z-50 w-full backdrop-blur-2xl border-b shadow-lg transition-colors duration-300
+        ${isDark
+          ? 'bg-[#161b22]/80 border-white/10 shadow-black/30'
+          : 'bg-white/60 border-white/40 shadow-blue-100/20'
+        }`}>
         <div className="px-4 md:px-12 py-4 flex justify-between items-center gap-3">
           {/* Logo */}
           <div className="flex items-center gap-4 shrink-0">
@@ -152,20 +163,64 @@ export default function DashboardPage() {
             </Link>
 
             {/* Search — desktop inline */}
-            <div className="hidden md:flex items-center bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 w-72 lg:w-80 shadow-lg shadow-blue-100/30 border border-blue-100/50 group focus-within:shadow-xl focus-within:shadow-blue-200/40 focus-within:border-[#1d7cf2]/50 transition-all duration-300">
-              <Search className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-[#1d7cf2] transition-colors shrink-0" />
+            <div className={`hidden md:flex items-center backdrop-blur-xl rounded-2xl px-5 py-3 w-72 lg:w-80 shadow-lg border transition-all duration-300
+              focus-within:shadow-xl focus-within:border-[#1d7cf2]/50
+              ${isDark
+                ? 'bg-[#21262d]/80 border-white/10 shadow-black/20 focus-within:shadow-blue-900/40'
+                : 'bg-white/80 border-blue-100/50 shadow-blue-100/30 focus-within:shadow-blue-200/40'
+              }`}>
+              <Search className={`w-5 h-5 mr-3 shrink-0 transition-colors group-focus-within:text-[#1d7cf2]
+                ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <input
                 type="text"
                 placeholder="Search talent..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent text-sm outline-none w-full font-bold placeholder:text-gray-400"
+                className={`bg-transparent text-sm outline-none w-full font-bold
+                  ${isDark ? 'text-gray-100 placeholder:text-gray-500' : 'text-gray-800 placeholder:text-gray-400'}`}
               />
             </div>
           </div>
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            {/* Dark Mode Toggle */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => toggleTheme()}
+              className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg
+                ${isDark
+                  ? 'bg-gradient-to-br from-yellow-400 to-orange-400 shadow-yellow-500/30 text-gray-900'
+                  : 'bg-gradient-to-br from-slate-700 to-slate-900 shadow-slate-500/30 text-yellow-300'
+                }`}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              <AnimatePresence mode="wait">
+                {isDark ? (
+                  <motion.div
+                    key="sun"
+                    initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                    animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                    exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Sun className="w-5 h-5" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="moon"
+                    initial={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                    animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                    exit={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Moon className="w-5 h-5" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+
             {isGuest ? (
               <Link href="/login">
                 <motion.button
@@ -188,7 +243,11 @@ export default function DashboardPage() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowLogoutModal(true)}
-                  className="flex items-center gap-2 px-3 md:px-5 py-2.5 rounded-xl text-red-500 font-black text-xs uppercase tracking-widest hover:bg-red-50/80 backdrop-blur-xl transition-all"
+                  className={`flex items-center gap-2 px-3 md:px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all
+                    ${isDark
+                      ? 'text-red-400 hover:bg-red-900/30'
+                      : 'text-red-500 hover:bg-red-50/80'
+                    }`}
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Logout</span>
@@ -214,14 +273,20 @@ export default function DashboardPage() {
 
         {/* Search — mobile full width row */}
         <div className="md:hidden px-4 pb-3">
-          <div className="flex items-center bg-white/80 backdrop-blur-xl rounded-2xl px-4 py-3 w-full shadow-lg shadow-blue-100/30 border border-blue-100/50 focus-within:border-[#1d7cf2]/50 transition-all duration-300">
-            <Search className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+          <div className={`flex items-center backdrop-blur-xl rounded-2xl px-4 py-3 w-full border transition-all duration-300
+            focus-within:border-[#1d7cf2]/50
+            ${isDark
+              ? 'bg-[#21262d]/80 border-white/10 shadow-black/20'
+              : 'bg-white/80 border-blue-100/50 shadow-lg shadow-blue-100/30'
+            }`}>
+            <Search className={`w-5 h-5 mr-3 shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
             <input
               type="text"
               placeholder="Search talent..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-transparent text-sm outline-none w-full font-bold placeholder:text-gray-400"
+              className={`bg-transparent text-sm outline-none w-full font-bold
+                ${isDark ? 'text-gray-100 placeholder:text-gray-500' : 'text-gray-800 placeholder:text-gray-400'}`}
             />
           </div>
         </div>
@@ -239,13 +304,14 @@ export default function DashboardPage() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               whileHover={{ scale: 1.05 }}
-              className="mb-6 inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-yellow-50/90 to-orange-50/90 backdrop-blur-xl border-2 border-yellow-300/50 text-orange-600 text-sm font-black rounded-2xl tracking-wide shadow-xl shadow-orange-200/50"
+              className={`mb-6 inline-flex items-center gap-3 px-6 py-3 backdrop-blur-xl border-2 text-sm font-black rounded-2xl tracking-wide shadow-xl
+                ${isDark
+                  ? 'bg-yellow-900/30 border-yellow-600/40 text-yellow-300 shadow-yellow-900/30'
+                  : 'bg-gradient-to-r from-yellow-50/90 to-orange-50/90 border-yellow-300/50 text-orange-600 shadow-orange-200/50'
+                }`}
             >
               <motion.div
-                animate={{ 
-                  rotate: [0, 10, -10, 10, 0],
-                  scale: [1, 1.2, 1, 1.2, 1]
-                }}
+                animate={{ rotate: [0, 10, -10, 10, 0], scale: [1, 1.2, 1, 1.2, 1] }}
                 transition={{ duration: 3, repeat: Infinity }}
                 className="text-2xl"
               >
@@ -254,9 +320,10 @@ export default function DashboardPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-black uppercase tracking-wider">Guest Mode</span>
-                  <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] rounded-full font-black uppercase">Limited</span>
+                  <span className={`px-2 py-0.5 text-white text-[10px] rounded-full font-black uppercase
+                    ${isDark ? 'bg-yellow-600' : 'bg-orange-500'}`}>Limited</span>
                 </div>
-                <p className="text-xs font-semibold text-orange-500 mt-0.5">
+                <p className={`text-xs font-semibold mt-0.5 ${isDark ? 'text-yellow-400' : 'text-orange-500'}`}>
                   Sign in to unlock full features
                 </p>
               </div>
@@ -264,7 +331,8 @@ export default function DashboardPage() {
           )}
           
           <motion.h2 
-            className="text-5xl md:text-6xl font-black tracking-tight text-gray-900 mb-3"
+            className={`text-5xl md:text-6xl font-black tracking-tight mb-3
+              ${isDark ? 'text-gray-100' : 'text-gray-900'}`}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
@@ -283,7 +351,8 @@ export default function DashboardPage() {
           </motion.h2>
           
           <motion.p 
-            className="text-gray-500 font-bold uppercase tracking-[0.2em] text-xs"
+            className={`font-bold uppercase tracking-[0.2em] text-xs
+              ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
@@ -305,7 +374,7 @@ export default function DashboardPage() {
                 <h3 className="text-2xl font-black bg-gradient-to-r from-gray-900 via-[#1d7cf2] to-purple-500 bg-clip-text text-transparent mb-2">
                   Welcome, {currentUser.user_name}!
                 </h3>
-                <p className="text-gray-500 font-semibold">
+                <p className={`font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   View your profile from the menu above · Others who published to Dashboard appear below
                 </p>
               </motion.div>
@@ -319,7 +388,7 @@ export default function DashboardPage() {
             ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredUsers.map((user, index) => (
-              <UserCard key={user.user_id} user={user} index={index} />
+              <UserCard key={user.user_id} user={user} index={index} isDark={isDark} />
             ))}
           </div>
             )}
@@ -342,7 +411,11 @@ export default function DashboardPage() {
               exit={{ opacity: 0, scale: 0.8, y: 50 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative bg-white/90 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-[420px] p-10 text-center overflow-hidden border border-white/50"
+              className={`relative backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-[420px] p-10 text-center overflow-hidden border
+                ${isDark
+                  ? 'bg-[#161b22]/95 border-white/10 shadow-black/50'
+                  : 'bg-white/90 border-white/50'
+                }`}
             >
               <motion.div
                 animate={{ rotate: [0, 360], scale: [1, 1.2, 1] }}
@@ -385,7 +458,7 @@ export default function DashboardPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="text-gray-600 font-bold text-sm mb-8"
+                  className={`font-bold text-sm mb-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
                 >
                   Are you sure?
                 </motion.p>

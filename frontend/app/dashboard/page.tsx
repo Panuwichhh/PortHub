@@ -132,8 +132,9 @@ export default function DashboardPage() {
 
       {/* Navbar */}
       <nav className="sticky top-0 z-50 w-full bg-white/60 backdrop-blur-2xl border-b border-white/40 shadow-lg shadow-blue-100/20">
-        <div className="px-6 md:px-12 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-8">
+        <div className="px-4 md:px-12 py-4 flex justify-between items-center gap-3">
+          {/* Logo */}
+          <div className="flex items-center gap-4 shrink-0">
             <Link href="/dashboard" className="group">
               <motion.div
                 whileHover={{ scale: 1.05 }}
@@ -149,26 +150,28 @@ export default function DashboardPage() {
                 />
               </motion.div>
             </Link>
-            
-            <div className="hidden lg:flex items-center bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 w-80 shadow-lg shadow-blue-100/30 border border-blue-100/50 group focus-within:shadow-xl focus-within:shadow-blue-200/40 focus-within:border-[#1d7cf2]/50 transition-all duration-300">
-              <Search className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-[#1d7cf2] transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Search talent..." 
+
+            {/* Search — desktop inline */}
+            <div className="hidden md:flex items-center bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 w-72 lg:w-80 shadow-lg shadow-blue-100/30 border border-blue-100/50 group focus-within:shadow-xl focus-within:shadow-blue-200/40 focus-within:border-[#1d7cf2]/50 transition-all duration-300">
+              <Search className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-[#1d7cf2] transition-colors shrink-0" />
+              <input
+                type="text"
+                placeholder="Search talent..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="bg-transparent text-sm outline-none w-full font-bold placeholder:text-gray-400"
               />
             </div>
           </div>
-          
-          <div className="flex items-center gap-5">
+
+          {/* Right side */}
+          <div className="flex items-center gap-3">
             {isGuest ? (
               <Link href="/login">
-                <motion.button 
+                <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  className="relative flex items-center gap-2 px-8 py-3 rounded-2xl bg-gradient-to-r from-[#1d7cf2] to-blue-500 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-300/50 overflow-hidden group"
+                  className="relative flex items-center gap-2 px-5 md:px-8 py-3 rounded-2xl bg-gradient-to-r from-[#1d7cf2] to-blue-500 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-300/50 overflow-hidden group"
                 >
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
@@ -176,23 +179,23 @@ export default function DashboardPage() {
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                   />
                   <LogIn className="w-4 h-4 relative z-10" />
-                  <span className="relative z-10">Sign In</span>
+                  <span className="relative z-10 hidden sm:inline">Sign In</span>
                 </motion.button>
               </Link>
             ) : (
               <>
-                <motion.button 
+                <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowLogoutModal(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-red-500 font-black text-xs uppercase tracking-widest hover:bg-red-50/80 backdrop-blur-xl transition-all"
+                  className="flex items-center gap-2 px-3 md:px-5 py-2.5 rounded-xl text-red-500 font-black text-xs uppercase tracking-widest hover:bg-red-50/80 backdrop-blur-xl transition-all"
                 >
                   <LogOut className="w-4 h-4" />
-                  Logout
+                  <span className="hidden sm:inline">Logout</span>
                 </motion.button>
 
                 <Link href={`/profile/${currentUser?.user_id || ''}`}>
-                  <motion.div 
+                  <motion.div
                     whileHover={{ y: -3, rotate: 5 }}
                     className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-[#1d7cf2] to-purple-500 flex items-center justify-center text-white shadow-xl shadow-blue-300/40 cursor-pointer overflow-hidden"
                   >
@@ -206,6 +209,20 @@ export default function DashboardPage() {
                 </Link>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Search — mobile full width row */}
+        <div className="md:hidden px-4 pb-3">
+          <div className="flex items-center bg-white/80 backdrop-blur-xl rounded-2xl px-4 py-3 w-full shadow-lg shadow-blue-100/30 border border-blue-100/50 focus-within:border-[#1d7cf2]/50 transition-all duration-300">
+            <Search className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search talent..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-transparent text-sm outline-none w-full font-bold placeholder:text-gray-400"
+            />
           </div>
         </div>
       </nav>

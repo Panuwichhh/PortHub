@@ -184,6 +184,12 @@ func CreateProject(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		// Validate title length
+		if len(input.Title) > 255 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Title must not exceed 255 characters"})
+			return
+		}
+
 		imageJSON, _ := json.Marshal(input.Images)
 		if input.Images == nil {
 			imageJSON = []byte("[]")
@@ -300,9 +306,25 @@ func UpdateProject(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		// Get existing project data first
+		var existingTitle, existingDesc, existingImageURL sql.NullString
+		err = db.QueryRow(`
+			SELECT project_name, description, image_url
+			FROM projects
+			WHERE project_id = $1 AND user_id = $2
+		`, projectID, userID).Scan(&existingTitle, &existingDesc, &existingImageURL)
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+			return
+		}
+
 		var input struct {
-			Title  string   `json:"title"`
-			Desc   string   `json:"desc"`
+			Title  *string  `json:"title"`
+			Desc   *string  `json:"desc"`
 			Images []string `json:"images"`
 		}
 
@@ -311,16 +333,41 @@ func UpdateProject(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		imageJSON, _ := json.Marshal(input.Images)
-		if input.Images == nil {
-			imageJSON = []byte("[]")
+		// Validate title length
+		if input.Title != nil && len(*input.Title) > 255 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Title must not exceed 255 characters"})
+			return
 		}
+
+		// Use existing values if not provided
+		finalTitle := existingTitle.String
+		if input.Title != nil {
+			finalTitle = *input.Title
+		}
+
+		finalDesc := existingDesc.String
+		if input.Desc != nil {
+			finalDesc = *input.Desc
+		}
+
+		// Handle images
+		var finalImages []string
+		if input.Images != nil {
+			finalImages = input.Images
+		} else if existingImageURL.Valid && existingImageURL.String != "" {
+			_ = json.Unmarshal([]byte(existingImageURL.String), &finalImages)
+		}
+		if finalImages == nil {
+			finalImages = []string{}
+		}
+
+		imageJSON, _ := json.Marshal(finalImages)
 
 		result, err := db.Exec(`
 			UPDATE projects
 			SET project_name = $1, description = $2, image_url = $3
 			WHERE project_id = $4 AND user_id = $5
-		`, input.Title, input.Desc, string(imageJSON), projectID, userID)
+		`, finalTitle, finalDesc, string(imageJSON), projectID, userID)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update project"})
@@ -334,16 +381,16 @@ func UpdateProject(db *sql.DB) gin.HandlerFunc {
 		}
 
 		img := ""
-		if len(input.Images) > 0 {
-			img = input.Images[0]
+		if len(finalImages) > 0 {
+			img = finalImages[0]
 		}
 
 		c.JSON(http.StatusOK, gin.H{
 			"id":     strconv.Itoa(projectID),
-			"title":  input.Title,
-			"desc":   input.Desc,
+			"title":  finalTitle,
+			"desc":   finalDesc,
 			"img":    img,
-			"images": input.Images,
+			"images": finalImages,
 		})
 	}
 }

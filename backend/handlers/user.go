@@ -258,7 +258,30 @@ func DeleteMe(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		result, err := db.Exec(`DELETE FROM users WHERE user_id = $1`, userID)
+		// Start transaction to ensure all deletions succeed or fail together
+		tx, err := db.Begin()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+			return
+		}
+		defer func() { _ = tx.Rollback() }()
+
+		// Delete from published_profiles (dashboard data)
+		_, err = tx.Exec(`DELETE FROM published_profiles WHERE user_id = $1`, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete published profile"})
+			return
+		}
+
+		// Delete from published_projects (dashboard data)
+		_, err = tx.Exec(`DELETE FROM published_projects WHERE user_id = $1`, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete published projects"})
+			return
+		}
+
+		// Delete from users (this will cascade delete projects, user_skills, verification_codes)
+		result, err := tx.Exec(`DELETE FROM users WHERE user_id = $1`, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -267,6 +290,12 @@ func DeleteMe(db *sql.DB) gin.HandlerFunc {
 		rowsAffected, _ := result.RowsAffected()
 		if rowsAffected == 0 {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+
+		// Commit transaction
+		if err := tx.Commit(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit deletion"})
 			return
 		}
 

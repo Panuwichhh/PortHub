@@ -136,7 +136,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-[#f0f7ff] via-white to-[#fef3ff] flex flex-col font-sans overflow-x-hidden">
+    <div className="relative min-h-screen bg-[var(--background)] flex flex-col font-sans overflow-x-hidden transition-colors duration-300">
       
       {/* Enhanced Animated Background */}
       <div className="fixed inset-0 pointer-events-none">
@@ -230,7 +230,7 @@ export default function RegisterPage() {
           initial={{ opacity: 0, scale: 0.95, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="bg-white/80 backdrop-blur-2xl w-full max-w-[1000px] my-8 p-10 md:p-14 rounded-3xl shadow-2xl flex flex-col md:flex-row gap-12 relative border-2 border-white/60 overflow-hidden"
+          className="bg-[var(--card-bg)] backdrop-blur-2xl w-full max-w-[1000px] my-8 p-10 md:p-14 rounded-3xl shadow-2xl flex flex-col md:flex-row gap-12 relative border-2 border-[var(--card-border)] overflow-hidden"
         >
           
           {/* Decorative Elements */}
@@ -333,7 +333,7 @@ export default function RegisterPage() {
                 <label className="block text-[#1d7cf2] font-black text-sm mb-2 ml-1 uppercase tracking-wide">Skills</label>
                 <motion.div 
                   whileHover={{ scale: 1.01 }}
-                  className="rounded-2xl border-2 border-gray-200 bg-white/80 backdrop-blur-xl p-5 space-y-4 focus-within:border-[#1d7cf2] focus-within:ring-4 focus-within:ring-[#1d7cf2]/10 transition-all shadow-lg"
+                  className="rounded-2xl border-2 border-[var(--input-border)] bg-[var(--input-bg)] backdrop-blur-xl p-5 space-y-4 focus-within:border-[#1d7cf2] focus-within:ring-4 focus-within:ring-[#1d7cf2]/10 transition-all shadow-lg"
                 >
                   {/* Skills Tags */}
                   <div className="flex flex-wrap items-center gap-2">
@@ -400,7 +400,7 @@ export default function RegisterPage() {
                               }
                             }}
                             placeholder="Type skill and press Enter"
-                            className="flex-1 px-4 py-2.5 rounded-xl border-2 border-[#1d7cf2]/30 bg-white/80 text-black focus:outline-none focus:border-[#1d7cf2] focus:ring-4 focus:ring-[#1d7cf2]/10 transition-all placeholder:text-gray-400 placeholder:text-sm font-semibold shadow-md"
+                            className="flex-1 px-4 py-2.5 rounded-xl border-2 border-[#1d7cf2]/30 bg-[var(--input-bg)] text-[var(--text-primary)] focus:outline-none focus:border-[#1d7cf2] focus:ring-4 focus:ring-[#1d7cf2]/10 transition-all placeholder:text-[var(--text-muted)] placeholder:text-sm font-semibold shadow-md"
                           />
                           <motion.button
                             type="button"
@@ -582,7 +582,7 @@ function InputGroup({ label, placeholder, type = "text", value, onChange, isPass
           min={min}
           max={max}
           step={step}
-          className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-200 focus:outline-none focus:border-[#1d7cf2] focus:ring-4 focus:ring-[#1d7cf2]/10 transition-all text-black bg-white shadow-lg font-semibold placeholder:text-gray-400"
+          className="w-full px-5 py-3.5 rounded-2xl border-2 border-[var(--input-border)] focus:outline-none focus:border-[#1d7cf2] focus:ring-4 focus:ring-[#1d7cf2]/10 transition-all text-[var(--text-primary)] bg-[var(--input-bg)] shadow-lg font-semibold placeholder:text-[var(--text-muted)]"
         />
         {isPassword && (
           <motion.button

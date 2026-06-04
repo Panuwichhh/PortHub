@@ -1,26 +1,246 @@
 @import "tailwindcss";
 
+/* ─── Light mode defaults ─── */
 :root {
-  --background: #ffffff;
+  --background: #f0f7ff;
   --foreground: #171717;
+  --card-bg: rgba(255,255,255,0.80);
+  --card-border: rgba(255,255,255,0.60);
+  --nav-bg: rgba(255,255,255,0.60);
+  --input-bg: rgba(255,255,255,0.80);
+  --input-border: rgba(219,234,254,0.50);
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+}
+
+/* ─── Dark mode overrides ─── */
+.dark {
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --card-bg: rgba(33,38,45,0.90);
+  --card-border: rgba(255,255,255,0.08);
+  --nav-bg: rgba(22,27,34,0.85);
+  --input-bg: rgba(33,38,45,0.90);
+  --input-border: rgba(255,255,255,0.12);
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ─── Base: apply background & text to everything ─── */
+html,
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* ─── Override ALL page wrapper gradients in dark mode ─── */
+.dark [class*="from-[#f0f7ff]"],
+.dark [class*="via-white"],
+.dark [class*="to-[#fef3ff]"] {
+  background-image: none !important;
+  background-color: var(--background) !important;
+}
+
+/* ─── Cards / modals ─── */
+.dark [class*="bg-white"] {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+
+/* ─── Navbar ─── */
+.dark nav[class*="bg-white"] {
+  background-color: var(--nav-bg) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* ─── Inputs ─── */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* ─── Text colors ─── */
+.dark [class*="text-black"] {
+  color: var(--text-primary) !important;
+}
+
+.dark [class*="text-gray-900"] {
+  color: var(--text-primary) !important;
+}
+
+.dark [class*="text-gray-800"] {
+  color: var(--text-primary) !important;
+}
+
+.dark [class*="text-gray-700"] {
+  color: var(--text-secondary) !important;
+}
+
+.dark [class*="text-gray-600"] {
+  color: var(--text-secondary) !important;
+}
+
+.dark [class*="text-gray-500"] {
+  color: var(--text-muted) !important;
+}
+
+.dark [class*="text-gray-400"] {
+  color: var(--text-muted) !important;
+}
+
+/* ─── Fix text gradients with dark colors in dark mode ─── */
+/* Tailwind bg-clip-text ที่มี from-gray-900 / from-[#1a1a1a] จะมองไม่เห็นใน dark mode */
+
+.dark [class*="from-gray-900"][class*="bg-clip-text"],
+.dark [class*="from-gray-900"][class*="text-transparent"] {
+  --tw-gradient-from: #e6edf3 !important;
+}
+
+.dark [class*="via-gray-900"][class*="bg-clip-text"],
+.dark [class*="via-gray-900"][class*="text-transparent"] {
+  --tw-gradient-via: #e6edf3 !important;
+}
+
+/* inline style gradient (Sign in title ใน login page) */
+.dark [style*="-webkit-text-fill-color: transparent"],
+.dark [style*="WebkitTextFillColor"] {
+  background-image: linear-gradient(to right, #e6edf3, #1d7cf2, #a855f7) !important;
+}
+
+
+.dark [class*="border-gray-100"] {
+  border-color: rgba(255,255,255,0.10) !important;
+}
+
+.dark [class*="border-white"] {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* ─── Dividers ─── */
+.dark [class*="bg-gray-100"],
+.dark [class*="bg-gray-50"] {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+
+/* ─── Hover states ─── */
+.dark [class*="hover:bg-gray-100"]:hover,
+.dark [class*="hover:bg-gray-50"]:hover {
+  background-color: rgba(255,255,255,0.08) !important;
+}
+
+/* ─── Scrollbar ─── */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #161b22;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* ─── Loading spinner background ─── */
+.dark [class*="from-[#f0f7ff]"][class*="flex"][class*="items-center"] {
+  background-color: var(--background) !important;
+  background-image: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   LIGHT MODE — ปิด shimmer / slide animations บนปุ่มและ card
+   ══════════════════════════════════════════════════════════ */
+
+/* 1. ปิด shimmer (เส้นแสงวิ่งซ้าย-ขวา via-white/30) ทุกปุ่ม */
+button > div[class*="from-transparent"][class*="via-white"],
+a > button > div[class*="from-transparent"][class*="via-white"],
+[class*="overflow-hidden"] > div[class*="from-transparent"][class*="via-white"],
+div[class*="via-white\/30"],
+div[class*="via-white\/20"],
+div[class*="via-white\/10"] {
+  display: none !important;
+  animation: none !important;
+}
+
+/* 2. ลด blob background ให้นุ่มลง */
+.fixed div[class*="blur-[120px]"],
+.fixed div[class*="blur-[150px]"] {
+  opacity: 0.04 !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   DARK MODE — ปิด shimmer / slide animations บนปุ่มและ card
+   ══════════════════════════════════════════════════════════ */
+
+/* 1. หยุด shimmer (เส้นแสงวิ่งซ้าย-ขวา) บนปุ่มทุกปุ่ม */
+.dark button > div[style*="translateX"],
+.dark button > div[class*="from-transparent"][class*="via-white"],
+.dark a > button > div[class*="from-transparent"][class*="via-white"],
+.dark [class*="overflow-hidden"] > div[class*="from-transparent"][class*="via-white"] {
+  display: none !important;
+  animation: none !important;
+}
+
+/* 2. ปิด shimmer ที่ใช้ motion.div ใน framer-motion (via-white/30) */
+.dark div[class*="via-white\/30"],
+.dark div[class*="via-white\/20"],
+.dark div[class*="via-white\/10"] {
+  display: none !important;
+  animation: none !important;
+}
+
+/* 3. ปุ่ม gradient ใน dark mode — ลด opacity ให้นุ่มขึ้น ไม่จ้า */
+.dark button[class*="bg-gradient-to-r"],
+.dark a button[class*="bg-gradient-to-r"] {
+  opacity: 0.90;
+  filter: brightness(0.85) saturate(0.9);
+}
+
+.dark button[class*="bg-gradient-to-r"]:hover,
+.dark a button[class*="bg-gradient-to-r"]:hover {
+  opacity: 1;
+  filter: brightness(0.95) saturate(1);
+}
+
+/* 4. ปิด background blob animations ที่หมุนวนใน dark mode (ดูรำคาญ) */
+.dark .fixed div[class*="blur-[120px]"],
+.dark .fixed div[class*="blur-[150px]"] {
+  opacity: 0.015 !important;
+}
+
+/* 5. ลด glow/shadow ของปุ่มใน dark mode */
+.dark button[class*="shadow-blue-300"],
+.dark button[class*="shadow-blue-400"],
+.dark button[class*="shadow-purple"] {
+  box-shadow: 0 4px 15px rgba(29, 124, 242, 0.20) !important;
+}
+
+/* 6. Card hover glow ใน dark mode — ลดให้นุ่มลง */
+.dark [class*="hover:shadow-[0_30px_80px_rgba(29,124,242"] {
+  --tw-shadow: 0 8px 30px rgba(29, 124, 242, 0.12) !important;
+}
+
+/* 7. ปิด rotating gradient overlay บน profile avatar / icon */
+.dark div[class*="from-transparent"][class*="via-white\/30"] {
+  display: none !important;
+}
+
